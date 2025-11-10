@@ -5,3 +5,7 @@ __pycache__/
 *.ipynb_checkpoints/
 data/*
 !data/README.md
+data/raw/*
+data/processed/*
+!data/README.md
+!data/splits/*.csv
