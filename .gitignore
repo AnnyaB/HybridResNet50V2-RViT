@@ -3,9 +3,13 @@ __pycache__/
 *.pt
 *.pth
 *.ipynb_checkpoints/
-data/*
+
+# Datasets (keep only metadata and split files)
+data/raw/
+data/processed/
+data/external/
+data/interim/
+
 !data/README.md
-data/raw/*
-data/processed/*
-!data/README.md
+!data/splits/
 !data/splits/*.csv

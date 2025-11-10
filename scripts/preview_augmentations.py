@@ -23,7 +23,7 @@ from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# Path to one representative training image (example from glioma class)
+# Path to one representative training image (for instance from glioma class)
 # Choosin' any class sample; this image is used only for visual demonstration.
 SAMPLE_IMAGE_PATH = Path("data/processed/train/glioma")
 
