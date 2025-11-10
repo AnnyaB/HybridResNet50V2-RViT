@@ -1,0 +1,7 @@
+__pycache__/
+*.h5
+*.pt
+*.pth
+*.ipynb_checkpoints/
+data/*
+!data/README.md
