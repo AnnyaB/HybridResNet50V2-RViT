@@ -1,0 +1,9 @@
+source_split,class,count
+testing,glioma,300
+testing,meningioma,306
+testing,notumor,405
+testing,pituitary,300
+training,glioma,1321
+training,meningioma,1339
+training,notumor,1595
+training,pituitary,1457
