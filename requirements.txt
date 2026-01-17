@@ -1,5 +1,4 @@
 tensorflow==2.16.1
-torch==2.2.0
 numpy
 pandas
 matplotlib
@@ -7,3 +6,6 @@ scikit-learn
 opencv-python
 pillow
 seaborn
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1

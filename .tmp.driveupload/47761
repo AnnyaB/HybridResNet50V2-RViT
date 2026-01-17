@@ -1,5 +1,0 @@
-class,too_dark,too_bright,low_contrast,suspect,failed
-glioma,0,0,0,0,0
-meningioma,0,0,0,0,0
-notumor,0,0,0,0,0
-pituitary,0,0,0,0,0

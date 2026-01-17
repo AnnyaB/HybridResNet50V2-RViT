@@ -13,3 +13,6 @@ data/interim/
 !data/README.md
 !data/splits/
 !data/splits/*.csv
+
+# Colab/Drive temp
+.tmp.driveupload/
