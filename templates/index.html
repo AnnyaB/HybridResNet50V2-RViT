@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Brain MRI Tumor Detector</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="card">
+    <h2>Brain MRI Prediction</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+      <input type="file" name="image" accept="image/*" required>
+      <button type="submit">Predict</button>
+    </form>
+
+    {% if err %}
+      <div class="error">
+        <b>Error:</b> {{ err }}
+      </div>
+    {% endif %}
+
+    {% if pred %}
+      <div class="result">
+        <p><b>Tumor Type:</b> {{ pred }}</p>
+        <p><b>Confidence:</b> {{ conf }}</p>
+      </div>
+
+      <div class="section">
+        <h3>Probabilities</h3>
+        <img class="viz" src="data:image/png;base64,{{ probs_b64 }}" alt="probabilities">
+      </div>
+
+      <div class="section">
+        <h3>XAI</h3>
+        <div class="grid">
+          <div>
+            <div class="cap">Grad-CAM++</div>
+            <img class="viz" src="data:image/png;base64,{{ gradcam_b64 }}" alt="gradcam++">
+          </div>
+          <div>
+            <div class="cap">Attention Rollout</div>
+            <img class="viz" src="data:image/png;base64,{{ attn_b64 }}" alt="attention rollout">
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

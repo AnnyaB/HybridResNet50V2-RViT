@@ -1,150 +1,92 @@
 # scripts/data.py
+#
+# Dataset loader for CSV splits produced by dataset_prep.py:
+#   data/splits/tightcrop/{train,val,test}.csv
+# CSV columns:
+#   - image_path
+#   - class  (glioma/meningioma/pituitary/notumor)
+
 import os
-import csv
+from pathlib import Path
+import pandas as pd
 from PIL import Image
 
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torch.utils.data import Dataset
+import torchvision.transforms as T
 
 
-def _read_csv_rows(csv_path):
-    with open(csv_path, "r", newline="") as f:
-        reader = csv.DictReader(f)
-        rows = [r for r in reader]
-    return rows
+class AddGaussianNoise:
+    def __init__(self, std=0.02, p=0.5):
+        self.std = std
+        self.p = p
+
+    def __call__(self, x):
+        if torch.rand(1).item() > self.p:
+            return x
+        noise = torch.randn_like(x) * self.std
+        x = x + noise
+        return torch.clamp(x, 0.0, 1.0)
 
 
-def _infer_cols(rows):
-    cols = set(rows[0].keys())
-    path_col = None
-    label_col = None
-    for c in ["path", "filepath", "file", "image", "img_path"]:
-        if c in cols:
-            path_col = c
-            break
-    for c in ["label", "class", "target", "y"]:
-        if c in cols:
-            label_col = c
-            break
-    return path_col, label_col
+def _resolve_path(p, project_root):
+    # Your CSV may contain absolute paths from a different machine.
+    # This resolver makes the project portable for Colab/Kaggle.
+    if os.path.exists(p):
+        return p
+
+    p2 = str(p).replace("\\", "/")
+    key = "/data/processed/"
+    idx = p2.find(key)
+    if idx != -1:
+        rel = p2[idx + 1:]  # remove leading '/'
+        cand = str(Path(project_root) / rel)
+        if os.path.exists(cand):
+            return cand
+
+    # fallback: try relative to project_root directly
+    cand2 = str(Path(project_root) / p2)
+    if os.path.exists(cand2):
+        return cand2
+
+    return p  # let it fail loudly in __getitem__ for debugging
 
 
-class BrainMRIDataset(Dataset):
-    def __init__(self, root_dir, csv_path=None, class_to_idx=None, transform=None):
-        self.root_dir = root_dir
+def build_transforms(train, mean, std):
+    ops = []
+    if train:
+        ops.extend([
+            T.RandomRotation(degrees=15),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomAffine(degrees=0, translate=(0.05, 0.05)),
+        ])
+
+    ops.extend([T.ToTensor()])
+
+    if train:
+        ops.append(AddGaussianNoise(std=0.02, p=0.5))
+
+    ops.append(T.Normalize(mean=mean, std=std))
+    return T.Compose(ops)
+
+
+class BrainMRICSV(Dataset):
+    def __init__(self, csv_path, class_names, transform, project_root):
+        self.df = pd.read_csv(csv_path)
+        self.class_names = class_names
+        self.class_to_idx = {c: i for i, c in enumerate(class_names)}
         self.transform = transform
-        self.samples = []
-
-        if csv_path is not None and os.path.exists(csv_path):
-            rows = _read_csv_rows(csv_path)
-            if len(rows) == 0:
-                raise RuntimeError(f"CSV is empty: {csv_path}")
-
-            path_col, label_col = _infer_cols(rows)
-            if path_col is None or label_col is None:
-                raise RuntimeError(f"CSV must have path+label columns. Found: {list(rows[0].keys())}")
-
-            # build class_to_idx if needed
-            if class_to_idx is None:
-                labels = sorted(list({r[label_col] for r in rows}))
-                # if labels are numeric strings, sort numerically
-                try:
-                    labels_sorted = sorted(labels, key=lambda s: int(s))
-                    labels = labels_sorted
-                except Exception:
-                    pass
-                class_to_idx = {lab: i for i, lab in enumerate(labels)}
-
-            for r in rows:
-                rel = r[path_col]
-                lab = r[label_col]
-                img_path = rel if os.path.isabs(rel) else os.path.join(root_dir, rel)
-                if lab not in class_to_idx:
-                    # allow numeric labels
-                    try:
-                        li = int(lab)
-                        self.samples.append((img_path, li))
-                        continue
-                    except Exception:
-                        raise RuntimeError(f"Label '{lab}' not in class_to_idx keys: {list(class_to_idx.keys())}")
-                self.samples.append((img_path, class_to_idx[lab]))
-
-            self.class_to_idx = class_to_idx
-            self.idx_to_class = {v: k for k, v in class_to_idx.items()}
-            return
-
-        # Fallback: scan root_dir expecting root_dir/<class>/*.png|jpg
-        classes = sorted([d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))])
-        if class_to_idx is None:
-            class_to_idx = {c: i for i, c in enumerate(classes)}
-
-        for c in classes:
-            cdir = os.path.join(root_dir, c)
-            for fn in os.listdir(cdir):
-                if fn.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".webp")):
-                    self.samples.append((os.path.join(cdir, fn), class_to_idx[c]))
-
-        self.class_to_idx = class_to_idx
-        self.idx_to_class = {v: k for k, v in class_to_idx.items()}
+        self.project_root = project_root
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.df)
 
     def __getitem__(self, idx):
-        path, y = self.samples[idx]
-        img = Image.open(path).convert("RGB")
-        if self.transform is not None:
-            img = self.transform(img)
-        return img, torch.tensor(y, dtype=torch.long), path
+        row = self.df.iloc[idx]
+        img_path = _resolve_path(row["image_path"], self.project_root)
+        y_str = row["class"]
+        y = self.class_to_idx[y_str]
 
-
-def build_transforms(norm_mode="0.5"):
-    # norm_mode: "0.5" => mean=std=0.5; "imagenet" => ImageNet stats
-    if norm_mode == "imagenet":
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-    else:
-        mean = [0.5, 0.5, 0.5]
-        std = [0.5, 0.5, 0.5]
-
-    train_tf = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomApply([transforms.RandomRotation(degrees=10)], p=0.25),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std),
-    ])
-
-    eval_tf = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std),
-    ])
-
-    return train_tf, eval_tf
-
-
-def make_loaders(data_root, splits_dir, batch_size=32, num_workers=2, norm_mode="0.5"):
-    train_tf, eval_tf = build_transforms(norm_mode=norm_mode)
-
-    train_dir = os.path.join(data_root, "train")
-    val_dir = os.path.join(data_root, "val")
-    test_dir = os.path.join(data_root, "test")
-
-    train_csv = os.path.join(splits_dir, "train.csv")
-    val_csv = os.path.join(splits_dir, "val.csv")
-    test_csv = os.path.join(splits_dir, "test.csv")
-
-    train_ds = BrainMRIDataset(train_dir, csv_path=train_csv, transform=train_tf)
-    class_to_idx = train_ds.class_to_idx
-
-    val_ds = BrainMRIDataset(val_dir, csv_path=val_csv, class_to_idx=class_to_idx, transform=eval_tf)
-    test_ds = BrainMRIDataset(test_dir, csv_path=test_csv, class_to_idx=class_to_idx, transform=eval_tf)
-
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=num_workers, pin_memory=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
-                            num_workers=num_workers, pin_memory=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False,
-                             num_workers=num_workers, pin_memory=True)
-
-    return train_loader, val_loader, test_loader, train_ds.idx_to_class
+        img = Image.open(img_path).convert("RGB")
+        x = self.transform(img)
+        return x, y, img_path
