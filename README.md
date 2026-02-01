@@ -1,1 +1,2 @@
-# Hybrid ResNet50V2–RViT Brain Tumour Project
+## Pathology-Attentive CNN-Transformer Hybrid for Explainable Brain Tumour MRI Classification 
+

@@ -1,4 +1,18 @@
-Dataset: Kaggle Brain Tumor MRI (Nickparvar, 2024)
-Source: https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset
-Stored under data/raw/brain-tumor-mri-dataset/
-Do NOT push raw images to GitHub.
+
+
+## Details about the dataset from by Masoud Nickparvar 2021
+
+This dataset is a combination of the following three datasets :
+## figshare
+## SARTAJ dataset
+## Br35H
+
+This dataset contains **7023** images of human brain MRI images which are classified into 4 classes: **glioma** - **meningioma** - **no tumor** and **pituitary**.
+
+**no tumor** class images were taken from the Br35H dataset.
+
+I think **SARTAJ** dataset has a problem that the glioma class images are not **categorized** correctly, I realized this from the results of other people's work as well as the different models I trained, which is why I deleted the images in this folder and used the images on the figshare site instead.
+
+## References - 
+
+Msoud Nickparvar. (2021). Brain Tumor MRI Dataset [Data set]. Kaggle. https://doi.org/10.34740/KAGGLE/DSV/2645886
