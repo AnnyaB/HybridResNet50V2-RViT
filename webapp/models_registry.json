@@ -1,0 +1,39 @@
+{
+  "device": "auto",
+  "models": [
+    {
+      "id": "h1_with_pfda_gstea",
+      "name": "Hybrid-1 (PFD-A + GSTE-A)",
+      "repo_dir": "../Hybrid-model-with-pfdA-gsteA",
+      "model_file": "hybrid-A.py",
+      "xai_file": "Xai-A.py",
+      "checkpoint": "best_model.pt"
+    },
+    {
+      "id": "h1_without_pfda_gstea",
+      "name": "Hybrid-1 Ablation (No PFD-A/GSTE-A)",
+      "repo_dir": "../Hybrid-model-without-pfdA-gsteA",
+      "model_file": "Hybrid-without-A.py",
+      "xai_file": "Xai-without-A.py",
+      "checkpoint": "best_model (1).pt"
+    },
+    {
+      "id": "h2_with_pfdB_gsteB",
+      "name": "Hybrid-2 (PFD-B + GSTE-B)",
+      "repo_dir": "../Hybrid-model-with-pfdB-gsteB",
+      "model_file": "Hybrid-B.py",
+      "xai_file": "Xai-B.py",
+      "checkpoint": "best_model (1).pt",
+      "force_kwargs": { "use_pfd_gste": true }
+    },
+    {
+      "id": "h2_without_pfdB_gsteB",
+      "name": "Hybrid-2 Ablation (No PFD-B/GSTE-B)",
+      "repo_dir": "../Hybrid-model-without-pfdB-gsteB",
+      "model_file": "Hybrid-without-B.py",
+      "xai_file": "Xai-without-B.py",
+      "checkpoint": "best_model (1).pt",
+      "force_kwargs": { "use_pfd_gste": false }
+    }
+  ]
+}

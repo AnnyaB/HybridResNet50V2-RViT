@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Brain MRI Multi-Model Inference with XAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1>Brain MRI: Multi-Model Prediction with XAI</h1>
+      <p class="subtitle">
+        Upload one MRI image. The app runs all configured models and shows predictions, confidence,
+        tumor probability, and XAI overlays.
+      </p>
+    </header>
+
+    <section class="upload">
+      <form method="POST" enctype="multipart/form-data">
+        <label class="file">
+          <input type="file" name="image" accept="image/*" required>
+          <span>Select MRI image</span>
+        </label>
+        <button type="submit">Run all models</button>
+      </form>
+
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+
+      {% if uploaded_preview %}
+        <div class="preview">
+          <h2>Uploaded image (224×224 preview)</h2>
+          <img class="img" src="data:image/png;base64,{{ uploaded_preview }}" alt="Uploaded image preview"/>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if results %}
+      <section class="grid">
+        {% for r in results %}
+          <article class="card">
+            <div class="card-head">
+              <h2>{{ r.model_name }}</h2>
+              <div class="pred">
+                <div><b>Prediction:</b> {{ r.pred_class }}</div>
+                <div><b>Confidence:</b> {{ "%.4f"|format(r.confidence) }}</div>
+                <div><b>Tumor prob:</b> {{ "%.4f"|format(r.tumor_prob) }}</div>
+              </div>
+            </div>
+
+            <div class="charts">
+              <div class="chart">
+                <img src="data:image/png;base64,{{ r.chart_probs }}" alt="Class probability chart"/>
+              </div>
+              <div class="chart">
+                <img src="data:image/png;base64,{{ r.chart_tumor }}" alt="Tumor probability chart"/>
+              </div>
+            </div>
+
+            <div class="xai">
+              <h3>XAI overlays</h3>
+              <div class="xai-grid">
+                <div class="xai-item">
+                  <div class="xai-title">Grad-CAM++</div>
+                  {% if r.xai_gradcam %}
+                    <img src="data:image/png;base64,{{ r.xai_gradcam }}" alt="Grad-CAM++ overlay"/>
+                  {% else %}
+                    <div class="muted">Not available (no CNN activation/gradient captured).</div>
+                  {% endif %}
+                </div>
+
+                <div class="xai-item">
+                  <div class="xai-title">Attention rollout</div>
+                  {% if r.xai_rollout %}
+                    <img src="data:image/png;base64,{{ r.xai_rollout }}" alt="Attention rollout overlay"/>
+                  {% else %}
+                    <div class="muted">Not available (model did not return attention matrices).</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <footer class="footer">
+      <p class="small">
+        Disclaimer: Research demo only — not a clinical diagnostic device.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

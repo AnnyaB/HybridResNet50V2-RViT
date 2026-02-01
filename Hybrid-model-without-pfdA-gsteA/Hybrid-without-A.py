@@ -1,7 +1,7 @@
 
 # models/hybrid_model.py
 #
-# Ablation: Hybrid WITHOUT extensions (PFD + GSTE)
+# Ablation: Hybrid WITHOUT Krsna extensions (PFD + GSTE)
 # Keeps everything else the same:
 # - CNN: pretrained ResNet50V2 (timm features_only)
 # - Tokens: derived from CNN feature map (conv1x1 -> flatten)
