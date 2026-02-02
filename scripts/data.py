@@ -1,4 +1,3 @@
-
 # scripts/data.py
 #
 # This file defines a PyTorch Dataset that reads image paths and labels from a CSV.
@@ -9,180 +8,173 @@
 #   - image_path  -> where the MRI image lives on disk
 #   - class       -> one of: glioma / meningioma / pituitary / notumor
 
-import os                     # I use this to test whether a path exists on disk
-from pathlib import Path      # nicer path joining across different OSes (Windows/Linux/Mac)
+import os                     # used to check whether a path exists on disk (portable)
+from pathlib import Path      # safer/cross-platform path joining (Windows/Linux/Mac)
 
-import pandas as pd           # CSV reading and row access
-from PIL import Image         # image loading (PIL is standard for torchvision)
+import pandas as pd           # CSV loading as DataFrame
+from PIL import Image         # image loading + RGB conversion
 
-import torch                  # tensors and random generators
-from torch.utils.data import Dataset  # base class for PyTorch datasets
-import torchvision.transforms as T    # common image transforms and augmentation
+import torch                  # tensors + random generator used inside transforms
+from torch.utils.data import Dataset          # base class for PyTorch datasets
+import torchvision.transforms as T            # common image transforms + augmentation
 
 
 class AddGaussianNoise:
-    
     """
     Custom transform: sometimes add small Gaussian noise to a tensor image.
-    I apply it only during training (see build_transforms), to improve robustness.
+    Applied only during training (see build_transforms), to improve robustness.
     """
     def __init__(self, std=0.02, p=0.5):
-        self.std = std  # how strong the noise is
-        self.p = p      # probability of applying noise on a given sample
+        # std: noise strength (standard deviation)
+        # p: probability of applying noise to a sample
+        self.std = std
+        self.p = p
 
     def __call__(self, x):
-        # x is expected to be a torch tensor in [0,1] already (after ToTensor()).
+        # x must already be a tensor in [0,1], typically after ToTensor()
 
-        # Drew a random number in [0,1). If it's greater than p, skip noise.
-        # Note: this logic means "apply noise with probability p".
+        # Sample a uniform random number in [0,1).
+        # If it's greater than p, do NOT apply noise (so we apply noise with probability p).
         if torch.rand(1).item() > self.p:
             return x
 
-        # Created noise with same shape as x: N(0, std^2).
+        # Create Gaussian noise: N(0, std^2) with same shape as x.
         noise = torch.randn_like(x) * self.std
 
-        # Added the noise to the image tensor.
+        # Add noise to image tensor.
         x = x + noise
 
-        # Clamped back to valid pixel range [0,1] so we don't create weird values.
+        # Clamp to keep pixel range valid for normalized pipelines.
         return torch.clamp(x, 0.0, 1.0)
 
 
 def _resolve_path(p, project_root):
-    
     """
-    Tried to make CSV image paths portable.
+    Make CSV image paths portable.
 
-    Sometimes the CSV contains absolute paths from a different machine
-    (for instance., my Mac). On Kaggle those paths won't exist.
+    Problem this solves:
+      - CSVs may store absolute paths from another machine (e.g., your Mac).
+      - On Kaggle or another environment, those absolute paths won't exist.
 
-    This function tries a few reasonable conversions:
+    Strategy:
       1) If the path exists as-is, use it.
-      2) If it contains /data/processed/, rebuild under project_root.
-      3) Otherwise try treating it as relative to project_root.
-      4) If all fail, return original and let __getitem__ fail (it's for my debugging).
+      2) If it contains '/data/processed/', rebuild it under project_root.
+      3) Otherwise treat it as relative to project_root.
+      4) If all fail, return original and let Image.open fail (useful for debugging).
     """
-
-    # If the path is already valid on this machine, I'm done.
+    # Case 1: path already valid in this environment
     if os.path.exists(p):
         return p
 
-    # Converted backslashes to forward slashes so Windows-style paths don’t break parsing.
+    # Normalize Windows backslashes to forward slashes to avoid mismatches
     p2 = str(p).replace("\\", "/")
 
-    # This is a marker folder that might appear in old absolute paths.
+    # Marker for where processed data typically lives in your repo layout
     key = "/data/processed/"
 
-    # Finding where that marker occurs in the path.
+    # Find marker location
     idx = p2.find(key)
 
-    # If I found the marker, I tried rebuilding a path relative to project_root.
+    # Case 2: rebuild from project_root if marker exists
     if idx != -1:
-        # idx+1 removes a leading '/' so that Path(project_root) / rel joins properly
+        # idx+1 drops a leading '/' so Path(project_root)/rel joins correctly
         rel = p2[idx + 1:]
         cand = str(Path(project_root) / rel)
-
-        # If that candidate exists, used it.
         if os.path.exists(cand):
             return cand
 
-    # Fallback, tried treating the whole p2 as a path relative to project_root.
+    # Case 3: treat p2 as relative to project_root
     cand2 = str(Path(project_root) / p2)
     if os.path.exists(cand2):
         return cand2
 
-    # Final fallback: return original path.
-
-    # This will likely fail in Image.open(), but that can be good for debugging.
+    # Case 4: return original (fail later, but preserves debugging truth)
     return p
 
 
 def build_transforms(train, mean, std):
-    
     """
-    Built a torchvision transform pipeline.
-    - If train=True: add random augmentations.
-    - Always: ToTensor and Normalize.
+    Build a torchvision transform pipeline.
 
-    mean/std should be sequences of 3 values (for RGB channels),
-    for instance. mean=(0.485,0.456,0.406), std=(0.229,0.224,0.225).
+    Arguments:
+      train (bool): if True, add augmentations/noise for generalization.
+      mean/std: normalization stats for RGB channels (length 3 each),
+                e.g. ImageNet: mean=(0.485,0.456,0.406), std=(0.229,0.224,0.225)
+
+    Output:
+      torchvision.transforms.Compose callable
     """
-    ops = []  # I collected operations in a list, then compose them
+    ops = []  # accumulate operations in a list, then compose
 
     if train:
-        # Light augmentations to help generalization (don’t overfit exact poses).
+        # Light, label-preserving augmentations for MRI slices (small rotations/shifts)
         ops.extend([
-            T.RandomRotation(degrees=15),                 # rotate image randomly within +/- 15 degrees
-            T.RandomHorizontalFlip(p=0.5),                # flip half the time
-            T.RandomAffine(degrees=0, translate=(0.05, 0.05)),  # shift image slightly (up to 5% of width/height)
+            T.RandomRotation(degrees=15),                      # rotate within +/-15 degrees
+            T.RandomHorizontalFlip(p=0.5),                     # random flip 50% of time
+            T.RandomAffine(degrees=0, translate=(0.05, 0.05)),  # translate up to 5%
         ])
 
-    # Converted PIL image to float torch tensor:
-    # shape becomes [C,H,W] and values become [0,1].
+    # Convert PIL Image -> float tensor [C,H,W] scaled to [0,1]
     ops.extend([T.ToTensor()])
 
     if train:
-        # Added small noise sometimes, only for training.
+        # Add small Gaussian noise sometimes (regularization)
         ops.append(AddGaussianNoise(std=0.02, p=0.5))
 
-    # Normalize channels: (x - mean) / std
-    # This helps training stability and matches expected input stats for many backbones.
+    # Normalize each channel: (x - mean) / std
     ops.append(T.Normalize(mean=mean, std=std))
 
-    # Composed into a single callable transform.
+    # Return composed transform callable
     return T.Compose(ops)
 
 
 class BrainMRICSV(Dataset):
-    
     """
     A PyTorch Dataset that reads MRI image paths and labels from a CSV file.
 
-    Returns:
+    __getitem__ returns:
       x       : transformed image tensor [3,H,W]
       y       : integer class id
-      img_path: resolved image path (useful for debugging / visualization)
+      img_path: resolved image path (useful for debugging / explainability)
     """
     def __init__(self, csv_path, class_names, transform, project_root):
-        
-        # Loaded the CSV into a dataframe so we can index rows easily.
+        # Load CSV into a DataFrame so we can index rows by integer
         self.df = pd.read_csv(csv_path)
 
-        # Kept class names in a stable order (this defines label -> index mapping).
+        # Keep class names in stable order (defines label -> integer mapping)
         self.class_names = class_names
 
-        # Created mapping like {"glioma":0, "meningioma":1, ...}
+        # Mapping string label to index (e.g., "glioma" -> 0)
         self.class_to_idx = {c: i for i, c in enumerate(class_names)}
 
-        # Stored transform pipeline (train/val/test versions).
+        # Store transform pipeline (train vs val/test)
         self.transform = transform
 
-        # Used by _resolve_path() to rebuild paths in a portable way.
+        # Used by _resolve_path to rebuild CSV paths portably
         self.project_root = project_root
 
     def __len__(self):
-        
-        # Dataset length = number of rows in CSV.
+        # Number of samples equals number of rows in the CSV
         return len(self.df)
 
     def __getitem__(self, idx):
-        # Grabbed the row at position idx.
+        # Read row idx from DataFrame
         row = self.df.iloc[idx]
 
-        # Resolved the image path to something valid on this machine.
+        # Resolve image path so it works across machines/environments
         img_path = _resolve_path(row["image_path"], self.project_root)
 
-        # Read class label as a string, e.g. "glioma".
+        # Read class label as string
         y_str = row["class"]
 
-        # Converted string label -> integer index.
+        # Convert string label to integer index
         y = self.class_to_idx[y_str]
 
-        # Loaded the image from disk and force RGB (3 channels).
+        # Load image and enforce RGB 3-channel format
         img = Image.open(img_path).convert("RGB")
 
-        # Applied transforms: augment (if training), tensor conversion, normalization, etc.
+        # Apply transforms (augmentation, tensor conversion, normalization)
         x = self.transform(img)
 
-        # Returned tensor, label index, and path (path helps debugging and explainability later).
+        # Return: tensor, label index, and actual path
         return x, y, img_path
