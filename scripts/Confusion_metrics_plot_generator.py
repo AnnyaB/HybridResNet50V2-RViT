@@ -1,3 +1,8 @@
+# This is an example script to generate and save a confusion matrix plot
+# similar to the one presented in the paper.
+# I used this to recreate the confusion matrices generated frm the training runs since those generated were low resolution and
+# were barely readable. 
+
 import numpy as np
 import matplotlib.pyplot as plt
 
