@@ -1,7 +1,5 @@
 
 
-# scripts/train.py
-
 #   Train,  validate and test the HybridResNet50V2_RViT model (PFDA-GSTEA style),
 #   then save the best checkpoint (by val macro-F1) plus plots and metrics.
 #

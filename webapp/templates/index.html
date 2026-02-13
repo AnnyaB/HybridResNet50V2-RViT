@@ -1,82 +1,190 @@
+
+<!-- THE BASIC STRUCTURE FOR THE APPLICATION SINCE IT'S MAINLY BUILT FOR THE WEB INTERFACE -->
+
+
 <!doctype html>
+<!-- Declaring the document type as HTML5 -->
+
 <html lang="en">
+<!-- Root HTML element, language set to English for accessibility and SEO -->
+
 <head>
+  <!-- Metadata and resources for the page -->
+
   <meta charset="utf-8"/>
+  <!-- Specifies UTF-8 character encoding to support all standard characters -->
+
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- Ensuring responsive rendering on mobile and different screen sizes -->
+
   <title>Brain MRI Multi-Model Inference with XAI</title>
+  <!-- Title shown in the browser tab -->
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Links the external CSS stylesheet using Flask's url_for to correctly resolve static files -->
 </head>
+
 <body>
+  <!-- Main visible content of the page -->
+
   <div class="page">
+    <!-- Page-level container used to center and constrain layout width -->
+
     <header class="header">
+      <!-- Header section for page title and description -->
+
       <h1>Brain MRI: Multi-Model Prediction with XAI</h1>
+      <!-- Main heading describing the application purpose -->
+
       <p class="subtitle">
+        <!-- Short description explaining what the app does -->
         Upload one MRI image. The app runs all configured models and shows predictions, confidence,
         tumor probability, and XAI overlays.
       </p>
     </header>
 
     <section class="upload">
+      <!-- Section handling image upload and submission -->
+
       <form method="POST" enctype="multipart/form-data">
+        <!-- Form submits data via POST and allows file uploads -->
+
         <label class="file">
+          <!-- Custom file input wrapper -->
+
           <input type="file" name="image" accept="image/*" required>
+          <!-- File input: accepts any image type and is mandatory -->
+
           <span>Select MRI image</span>
+          <!-- Custom-styled clickable text for file selection -->
         </label>
+
         <button type="submit">Run all models</button>
+        <!-- Submit button that triggers model inference -->
       </form>
 
       {% if error %}
+      <!-- Jinja conditional: renders only if an error message exists -->
+
         <div class="error">{{ error }}</div>
+        <!-- Displays backend error message to the user -->
+
       {% endif %}
 
       {% if uploaded_preview %}
+      <!-- Jinja conditional: renders preview if an uploaded image exists -->
+
         <div class="preview">
+          <!-- Image preview container -->
+
           <h2>Uploaded image (224×224 preview)</h2>
-          <img class="img" src="data:image/png;base64,{{ uploaded_preview }}" alt="Uploaded image preview"/>
+          <!-- Preview heading -->
+
+          <img class="img"
+               src="data:image/png;base64,{{ uploaded_preview }}"
+               alt="Uploaded image preview"/>
+          <!-- Shows the uploaded image using base64 encoding -->
         </div>
+
       {% endif %}
     </section>
 
     {% if results %}
+    <!-- Jinja conditional: renders prediction results if models have returned outputs -->
+
       <section class="grid">
+        <!-- Grid container for model result cards -->
+
         {% for r in results %}
+        <!-- Looping over each model's result dictionary -->
+
           <article class="card">
+            <!-- Individual model result card -->
+
             <div class="card-head">
+              <!-- Card header containing model name and predictions -->
+
               <h2>{{ r.model_name }}</h2>
+              <!-- Displays the name of the model -->
+
               <div class="pred">
+                <!-- Prediction summary -->
+
                 <div><b>Prediction:</b> {{ r.pred_class }}</div>
+                <!-- Predicted class label -->
+
                 <div><b>Confidence:</b> {{ "%.4f"|format(r.confidence) }}</div>
+                <!-- Model confidence formatted to 4 decimal places -->
+
                 <div><b>Tumor prob:</b> {{ "%.4f"|format(r.tumor_prob) }}</div>
+                <!-- Tumor probability formatted to 4 decimal places -->
               </div>
             </div>
 
             <div class="charts">
+              <!-- Container for probability plots -->
+
               <div class="chart">
-                <img src="data:image/png;base64,{{ r.chart_probs }}" alt="Class probability chart"/>
+                <!-- Class probability chart -->
+                <img src="data:image/png;base64,{{ r.chart_probs }}"
+                     alt="Class probability chart"/>
               </div>
+
               <div class="chart">
-                <img src="data:image/png;base64,{{ r.chart_tumor }}" alt="Tumor probability chart"/>
+                <!-- Tumor vs no-tumor probability chart -->
+                <img src="data:image/png;base64,{{ r.chart_tumor }}"
+                     alt="Tumor probability chart"/>
               </div>
             </div>
 
             <div class="xai">
+              <!-- Explainable AI (XAI) section -->
+
               <h3>XAI overlays</h3>
+              <!-- Section heading -->
+
               <div class="xai-grid">
+                <!-- Grid layout for XAI visualizations -->
+
                 <div class="xai-item">
+                  <!-- Grad-CAM++ visualization block -->
+
                   <div class="xai-title">Grad-CAM++</div>
+                  <!-- Title describing the XAI method -->
+
                   {% if r.xai_gradcam %}
-                    <img src="data:image/png;base64,{{ r.xai_gradcam }}" alt="Grad-CAM++ overlay"/>
+                  <!-- Check if Grad-CAM output exists -->
+
+                    <img src="data:image/png;base64,{{ r.xai_gradcam }}"
+                         alt="Grad-CAM++ overlay"/>
+                    <!-- Display Grad-CAM++ overlay -->
+
                   {% else %}
-                    <div class="muted">Not available (no CNN activation/gradient captured).</div>
+                    <div class="muted">
+                      Not available (no CNN activation/gradient captured).
+                    </div>
+                    <!-- Message shown if Grad-CAM is unavailable -->
                   {% endif %}
                 </div>
 
                 <div class="xai-item">
+                  <!-- Attention rollout visualization block -->
+
                   <div class="xai-title">Attention rollout</div>
+                  <!-- Title for transformer-based explanation -->
+
                   {% if r.xai_rollout %}
-                    <img src="data:image/png;base64,{{ r.xai_rollout }}" alt="Attention rollout overlay"/>
+                  <!-- Check if attention rollout data exists -->
+
+                    <img src="data:image/png;base64,{{ r.xai_rollout }}"
+                         alt="Attention rollout overlay"/>
+                    <!-- Display attention rollout overlay -->
+
                   {% else %}
-                    <div class="muted">Not available (model did not return attention matrices).</div>
+                    <div class="muted">
+                      Not available (model did not return attention matrices).
+                    </div>
+                    <!-- Message shown if attention data is unavailable -->
                   {% endif %}
                 </div>
               </div>
@@ -88,7 +196,10 @@
     {% endif %}
 
     <footer class="footer">
+      <!-- Footer section -->
+
       <p class="small">
+        <!-- Disclaimer text -->
         Disclaimer: Research demo only — not a clinical diagnostic device.
       </p>
     </footer>

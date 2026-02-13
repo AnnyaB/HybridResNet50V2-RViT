@@ -1,6 +1,3 @@
-
-# scripts/predict_xai.py
-#
 # This script runs single-image inference with extras:
 # - normal prediction and confidence
 # - MC-dropout uncertainty (mean and variance over multiple stochastic passes)

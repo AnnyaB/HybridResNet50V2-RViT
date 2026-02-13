@@ -1,6 +1,4 @@
 
-
-# scripts/train.py
 #
 # Training + evaluation + plots for HybridResNet50V2–RViT.
 # Early stopping monitors validation macro F1.

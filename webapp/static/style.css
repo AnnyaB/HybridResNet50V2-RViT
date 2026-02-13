@@ -1,146 +1,263 @@
+/* I HAVEN'T DONE ANY SUCH RIGOROUS STYLING
+THIS IS JUST A QUICK AND MINIMAL CSS FILE TO JUST MAKE THE UI LOOK ATLEAST DECENT AT THIS POINT
+
+*/
+
+/* Root-level CSS variables (design tokens) shared across the entire app */
 :root {
-  --bg: #0b0f14;
-  --panel: #111826;
-  --panel2: #0f1724;
-  --text: #e7edf5;
-  --muted: #9fb0c3;
-  --accent: #7aa2ff;
-  --danger: #ff6b6b;
-  --border: rgba(255,255,255,0.08);
+  --bg: #0b0f14;                 /* Main background color for the page */
+  --panel: #111826;              /* Background for primary panels/cards */
+  --panel2: #0f1724;             /* Slightly darker/lighter variant for nested panels */
+  --text: #e7edf5;               /* Default foreground text color */
+  --muted: #9fb0c3;              /* Secondary / less prominent text color */
+  --accent: #7aa2ff;             /* Accent color for buttons and highlights */
+  --danger: #ff6b6b;             /* Error / warning color */
+  --border: rgba(255,255,255,0.08); /* Subtle semi-transparent border color */
 }
 
-* { box-sizing: border-box; }
+/* Applying consistent box-sizing so padding/borders don’t affect element width */
+* {
+  box-sizing: border-box;
+}
+
+/* Base page styling */
 body {
-  margin: 0;
+  margin: 0;                     /* Removing default browser margin */
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  background: var(--bg);
-  color: var(--text);
+                                   /* System-first font stack for performance and consistency */
+  background: var(--bg);         /* Applying global background color */
+  color: var(--text);            /* Applying global text color */
 }
 
-.page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+/* Main page container to center content and limit width */
+.page {
+  max-width: 1200px;             /* Preventing content from stretching too wide on large screens */
+  margin: 0 auto;                /* Centering horizontally */
+  padding: 24px;                 /* Spacing between content and screen edges */
+}
 
-.header h1 { margin: 0 0 6px 0; font-size: 28px; }
-.subtitle { margin: 0; color: var(--muted); max-width: 900px; }
+/* Main page heading */
+.header h1 {
+  margin: 0 0 6px 0;             /* Removing top margin, small gap below */
+  font-size: 28px;               /* Large heading size */
+}
 
+/* Subtitle text under the main heading */
+.subtitle {
+  margin: 0;                     /* Removing default margins */
+  color: var(--muted);           /* Muted color for secondary emphasis */
+  max-width: 900px;              /* Limiting line length for readability */
+}
+
+/* Upload section container */
 .upload {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  margin-top: 18px;
+  background: var(--panel);      /* Card-style background */
+  border: 1px solid var(--border); /* Subtle border */
+  border-radius: 16px;           /* Rounded corners */
+  padding: 16px;                 /* Internal spacing */
+  margin-top: 18px;              /* Space from previous section */
 }
 
-form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+/* Form layout */
+form {
+  display: flex;                 /* Horizontal layout */
+  gap: 12px;                     /* Space between items */
+  align-items: center;           /* Vertically align items */
+  flex-wrap: wrap;               /* Allow wrapping on smaller screens */
+}
 
-.file input { display: none; }
+/* Hide the default file input */
+.file input {
+  display: none;
+}
+
+/* Custom-styled file input trigger */
 .file span {
-  display: inline-block;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--panel2);
-  color: var(--text);
-  cursor: pointer;
+  display: inline-block;         /* Allow padding and sizing */
+  padding: 10px 12px;            /* Clickable area */
+  border-radius: 12px;           /* Rounded button-like shape */
+  border: 1px solid var(--border); /* Subtle border */
+  background: var(--panel2);     /* Secondary panel background */
+  color: var(--text);            /* Text color */
+  cursor: pointer;               /* Show pointer cursor on hover */
 }
 
+/* Primary button styling */
 button {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: none;
-  background: var(--accent);
-  color: #08101c;
-  font-weight: 700;
-  cursor: pointer;
+  padding: 10px 12px;            /* Button size */
+  border-radius: 12px;           /* Rounded corners */
+  border: none;                  /* Remove default border */
+  background: var(--accent);     /* Accent color */
+  color: #08101c;                /* Dark text for contrast */
+  font-weight: 700;              /* Bold text */
+  cursor: pointer;               /* Pointer cursor */
 }
 
+/* Error message styling */
 .error {
-  margin-top: 12px;
-  color: var(--danger);
+  margin-top: 12px;              /* Space above error */
+  color: var(--danger);          /* Red error color */
 }
 
-.preview { margin-top: 16px; }
-.preview h2 { margin: 0 0 10px 0; font-size: 16px; color: var(--muted); }
-.img { width: 224px; height: 224px; border-radius: 12px; border: 1px solid var(--border); }
+/* Image preview section */
+.preview {
+  margin-top: 16px;              /* Space above preview */
+}
 
+/* Preview heading */
+.preview h2 {
+  margin: 0 0 10px 0;            /* Space below heading */
+  font-size: 16px;               /* Smaller heading size */
+  color: var(--muted);           /* Muted text */
+}
+
+/* Preview image box */
+.img {
+  width: 224px;                  /* Fixed width */
+  height: 224px;                 /* Fixed height */
+  border-radius: 12px;           /* Rounded corners */
+  border: 1px solid var(--border); /* Border around image */
+}
+
+/* Grid layout for prediction cards */
 .grid {
-  margin-top: 18px;
-  display: grid;
+  margin-top: 18px;              /* Space above grid */
+  display: grid;                 /* Enable CSS grid */
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+                                   /* Two equal-width columns */
+  gap: 16px;                     /* Space between grid items */
 }
 
+/* Responsive layout for smaller screens */
 @media (max-width: 980px) {
-  .grid { grid-template-columns: 1fr; }
+  .grid {
+    grid-template-columns: 1fr;  /* Stack cards vertically */
+  }
 }
 
+/* Card container */
 .card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
+  background: var(--panel);      /* Panel background */
+  border: 1px solid var(--border); /* Border */
+  border-radius: 16px;           /* Rounded corners */
+  padding: 16px;                 /* Internal spacing */
 }
 
-.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.card h2 { margin: 0; font-size: 18px; }
-.pred { color: var(--muted); font-size: 14px; line-height: 1.4; }
+/* Card header layout */
+.card-head {
+  display: flex;                 /* Horizontal layout */
+  align-items: flex-start;       /* Align items at the top */
+  justify-content: space-between;/* Space between title and actions */
+  gap: 12px;                     /* Space between elements */
+}
 
+/* Card title */
+.card h2 {
+  margin: 0;                     /* Removing default margin */
+  font-size: 18px;               /* Medium heading size */
+}
+
+/* Prediction text */
+.pred {
+  color: var(--muted);           /* Muted explanatory text */
+  font-size: 14px;               /* Smaller font size */
+  line-height: 1.4;              /* Comfortable line spacing */
+}
+
+/* Chart container layout */
 .charts {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr;   /* default: stacked */
-  gap: 12px;
+  margin-top: 10px;              /* Spacing above charts */
+  display: grid;                 /* Grid layout */
+  grid-template-columns: 1fr;    /* Default stacked layout */
+  gap: 12px;                     /* Spacing between charts */
 }
 
+/* Two-column charts only on large screens */
 @media (min-width: 1100px) {
-  .charts { grid-template-columns: 1fr 1fr; }  /* only on big screens */
+  .charts {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
+/* Chart images */
 .chart img {
-  width: 100%;
-  height: 280px;        /* <- increase this (e.g., 300–360) */
-  object-fit: contain;  /* keeps the whole plot visible */
-  background: #0b0f14;  /* nice clean backdrop */
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  width: 100%;                   /* Fill container width */
+  height: 1000px;                /* Fixed height for consistency */
+  object-fit: contain;           /* Ensuring entire plot is visible */
+  background: #0b0f14;           /* Dark background behind transparent plots */
+  border-radius: 12px;           /* Rounded corners */
+  border: 1px solid var(--border); /* Subtle border */
 }
 
+/* XAI section container */
+.xai {
+  margin-top: 12px;              /* Spacing above XAI section */
+}
 
-.xai { margin-top: 12px; }
-.xai h3 { margin: 0 0 8px 0; font-size: 14px; color: var(--muted); }
+/* XAI section heading */
+.xai h3 {
+  margin: 0 0 8px 0;             /* Space below heading */
+  font-size: 14px;               /* Small heading size */
+  color: var(--muted);           /* Muted color */
+}
 
+/* Grid for XAI images */
 .xai-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)); 
-  gap: 12px;
+  display: grid;                 /* Grid layout */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+                                   /* Two-column layout */
+  gap: 12px;                     /* Space between items */
 }
 
+/* Individual XAI card */
 .xai-item {
-  background: var(--panel2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px; /* a bit more breathing room */
+  background: var(--panel2);     /* Secondary panel background */
+  border: 1px solid var(--border); /* Border */
+  border-radius: 12px;           /* Rounded corners */
+  padding: 12px;                 /* Internal spacing */
 }
 
+/* XAI visualization images */
 .xai-item img {
-  width: 100%;
-  height: 320px;            /* key: give it real size */
-  object-fit: contain;      /* keep whole overlay visible */
-  background: #0b0f14;      /* makes transparent areas look clean */
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  width: 100%;                   /* Fill card width */
+  height: 320px;                 /* Larger height for interpretability */
+  object-fit: contain;           /* Preserve full overlay visibility */
+  background: #0b0f14;           /* Clean background */
+  border-radius: 12px;           /* Rounded corners */
+  border: 1px solid var(--border); /* Border */
 }
 
-
+/* Responsive adjustments for smaller screens */
 @media (max-width: 980px) {
-  .xai-grid { grid-template-columns: 1fr; }
-  .xai-item img { height: 340px; } /* slightly larger on phones/tablets */
+  .xai-grid {
+    grid-template-columns: 1fr;  /* Stack XAI images vertically */
+  }
+
+  .xai-item img {
+    height: 340px;               /* Slightly taller on mobile/tablet */
+  }
 }
 
+/* XAI image title */
+.xai-title {
+  font-size: 13px;               /* Small text */
+  color: var(--muted);           /* Muted color */
+  margin-bottom: 8px;            /* Space below title */
+}
 
-.xai-title { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+/* Generic muted text utility */
+.muted {
+  color: var(--muted);           /* Muted color */
+  font-size: 13px;               /* Smaller text size */
+}
 
+/* Footer section */
+.footer {
+  margin-top: 22px;              /* Space above footer */
+  color: var(--muted);           /* Muted footer text */
+}
 
-.muted { color: var(--muted); font-size: 13px; }
-
-.footer { margin-top: 22px; color: var(--muted); }
-.small { font-size: 12px; }
+/* Small text utility */
+.small {
+  font-size: 12px;               /* Very small text size */
+}
