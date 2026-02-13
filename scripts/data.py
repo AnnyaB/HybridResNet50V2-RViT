@@ -14,9 +14,9 @@ from pathlib import Path      # safer/cross-platform path joining (Windows/Linux
 import pandas as pd           # CSV loading as DataFrame
 from PIL import Image         # image loading + RGB conversion
 
-import torch                  # tensors + random generator used inside transforms
+import torch                  # tensors and random generator used inside transforms
 from torch.utils.data import Dataset          # base class for PyTorch datasets
-import torchvision.transforms as T            # common image transforms + augmentation
+import torchvision.transforms as T            # common image transforms and augmentation
 
 
 class AddGaussianNoise:
@@ -38,27 +38,28 @@ class AddGaussianNoise:
         if torch.rand(1).item() > self.p:
             return x
 
-        # Create Gaussian noise: N(0, std^2) with same shape as x.
+        # Creating Gaussian noise: N(0, std^2) with same shape as x.
         noise = torch.randn_like(x) * self.std
 
-        # Add noise to image tensor.
+        # Adding noise to image tensor.
         x = x + noise
 
-        # Clamp to keep pixel range valid for normalized pipelines.
+        # Clamping to keep pixel range valid for normalized pipelines.
         return torch.clamp(x, 0.0, 1.0)
 
 
 def _resolve_path(p, project_root):
+    
     """
-    Make CSV image paths portable.
+    Making CSV image paths portable.
 
     Problem this solves:
-      - CSVs may store absolute paths from another machine (e.g., MY Mac).
+      - CSVs may store absolute paths from another machine (for instance., MY Mac).
       - On Kaggle or another environment, those absolute paths won't exist.
 
     Strategy:
       1) If the path exists as-is, use it.
-      2) If it contains '/data/processed/', rebuild it under project_root.
+      2) If it contains /data/processed/, rebuild it under project_root.
       3) Otherwise treat it as relative to project_root.
       4) If all fail, return original and let Image.open fail (useful for debugging).
     """
@@ -66,16 +67,16 @@ def _resolve_path(p, project_root):
     if os.path.exists(p):
         return p
 
-    # Normalize Windows backslashes to forward slashes to avoid mismatches
+    # Normalizing Windows backslashes to forward slashes to avoid mismatches
     p2 = str(p).replace("\\", "/")
 
-    # Marker for where processed data typically lives in your repo layout
+    # Marker for where processed data typically lives in my repo layout
     key = "/data/processed/"
 
-    # Find marker location
+    # Finding marker location
     idx = p2.find(key)
 
-    # Case 2: rebuild from project_root if marker exists
+    # Case 2: rebuilding from project_root if marker exists
     if idx != -1:
         # idx+1 drops a leading '/' so Path(project_root)/rel joins correctly
         rel = p2[idx + 1:]
@@ -83,18 +84,19 @@ def _resolve_path(p, project_root):
         if os.path.exists(cand):
             return cand
 
-    # Case 3: treat p2 as relative to project_root
+    # Case 3: treating p2 as relative to project_root
     cand2 = str(Path(project_root) / p2)
     if os.path.exists(cand2):
         return cand2
 
-    # Case 4: return original (fail later, but preserves debugging truth)
+    # Case 4: returning original (fail later, but preserves debugging truth, pretty helpful for diagnosing path issues)
     return p
 
 
 def build_transforms(train, mean, std):
+    
     """
-    Build a torchvision transform pipeline.
+    Building a torchvision transform pipeline.
 
     Arguments:
       train (bool): if True, add augmentations/noise for generalization.
@@ -104,7 +106,7 @@ def build_transforms(train, mean, std):
     Output:
       torchvision.transforms.Compose callable
     """
-    ops = []  # accumulate operations in a list, then compose
+    ops = []  # accumulating operations in a list, then compose
 
     if train:
         # Light, label-preserving augmentations for MRI slices (small rotations/shifts)
@@ -114,21 +116,22 @@ def build_transforms(train, mean, std):
             T.RandomAffine(degrees=0, translate=(0.05, 0.05)),  # translate up to 5%
         ])
 
-    # Convert PIL Image -> float tensor [C,H,W] scaled to [0,1]
+    # Converting PIL Image -> float tensor [C,H,W] scaled to [0,1]
     ops.extend([T.ToTensor()])
 
     if train:
-        # Add small Gaussian noise sometimes (regularization)
+        # Adding small Gaussian noise sometimes (regularization)
         ops.append(AddGaussianNoise(std=0.02, p=0.5))
 
-    # Normalize each channel: (x - mean) / std
+    # Normalizing each channel: (x - mean) / std
     ops.append(T.Normalize(mean=mean, std=std))
 
-    # Return composed transform callable
+    # Returning composed transform callable
     return T.Compose(ops)
 
 
 class BrainMRICSV(Dataset):
+    
     """
     A PyTorch Dataset that reads MRI image paths and labels from a CSV file.
 
@@ -138,43 +141,45 @@ class BrainMRICSV(Dataset):
       img_path: resolved image path (useful for debugging / explainability)
     """
     def __init__(self, csv_path, class_names, transform, project_root):
-        # Load CSV into a DataFrame so we can index rows by integer
+        # Loading CSV into a DataFrame so we can index rows by integer
         self.df = pd.read_csv(csv_path)
 
-        # Keep class names in stable order (defines label -> integer mapping)
+        # Keeping class names in stable order (defines label -> integer mapping)
         self.class_names = class_names
 
         # Mapping string label to index (e.g., "glioma" -> 0)
         self.class_to_idx = {c: i for i, c in enumerate(class_names)}
 
-        # Store transform pipeline (train vs val/test)
+        # Storing transform pipeline (train vs val/test)
         self.transform = transform
 
         # Used by _resolve_path to rebuild CSV paths portably
         self.project_root = project_root
 
     def __len__(self):
+        
         # Number of samples equals number of rows in the CSV
         return len(self.df)
 
     def __getitem__(self, idx):
-        # Read row idx from DataFrame
+        
+        # Reading row idx from DataFrame
         row = self.df.iloc[idx]
 
-        # Resolve image path so it works across machines/environments
+        # Resolving image path so it works across machines/environments
         img_path = _resolve_path(row["image_path"], self.project_root)
 
-        # Read class label as string
+        # Reading class label as string
         y_str = row["class"]
 
         # Convert string label to integer index
         y = self.class_to_idx[y_str]
 
-        # Load image and enforce RGB 3-channel format
+        # Loading image and enforcing RGB 3-channel format
         img = Image.open(img_path).convert("RGB")
 
-        # Apply transforms (augmentation, tensor conversion, normalization)
+        # Applying transforms (augmentation, tensor conversion, normalization)
         x = self.transform(img)
 
-        # Return: tensor, label index, and actual path
+        # Returning: tensor, label index, and actual path
         return x, y, img_path

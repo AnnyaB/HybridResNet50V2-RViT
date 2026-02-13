@@ -1,50 +1,28 @@
-# dataset_plots.py
+# THIS FILE IS FOR GENERATING THE PLOTS FROM DATASET PREPARATION (dataset_prep.py) TO DESCRIBE THE DATASET IN THE REPORT. 
+# I PLOTS I SHARED IN MY REPORT ARE GENERATED USING THIS SCRIPT.
 
-"""
-Publication-quality figures for the dataset/methodology section, generated
-from the CSV artefacts created by dataset_prep.py.
-
-Figures produced (saved under results/):
-1) kaggle_training_testing_pies.png
-2) splits_class_pies.png
-3) class_distribution_overall_pct.png
-4) quality_flags_pct.png
-5) good_vs_suspect_overall_pie.png
-6) resolution_distribution_topk.png
-7) resolution_distribution_all_pie.png
-8) duplicates_effect_bar.png
-9) split_class_heatmap.png
-10) examples_per_class.png
-11) examples_good_vs_weird.png
-
-Notes:
-- This script assumes dataset_prep.py has already been run.
-- Titles/wording align with the leakage-safe Kaggle-aligned split:
-    * Train/Val are created from Kaggle Training (e.g., 80/20 stratified).
-    * Test is Kaggle Testing (held-out).
-"""
-
-# Standard library: path handling
+# Libraries I needed
+#  path handling
 from pathlib import Path
 
-# Third-party: numeric ops, CSV loading, plotting, and image loading
+#  numeric ops, CSV loading, plotting, and image loading
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 
-# ---------------------------------------------------------------------
-# Global Matplotlib style (paper-like)
-# ---------------------------------------------------------------------
+
+# Global Matplotlib style 
+
 
 # Configure Matplotlib defaults once so all figures are consistent:
 # - high DPI outputs for reports
 # - clean fonts, readable sizes
-# - minimalist axes styling + subtle grid
+# - minimalist axes styling and subtle grid
 plt.rcParams.update(
     {
-        "figure.dpi": 200,        # interactive/back-end dpi (preview)
-        "savefig.dpi": 600,       # file dpi (crisp for thesis PDF)
+        "figure.dpi": 200,        
+        "savefig.dpi": 600,       
         "savefig.facecolor": "white",
 
         "font.family": "DejaVu Sans",
@@ -67,11 +45,11 @@ plt.rcParams.update(
     }
 )
 
-# ---------------------------------------------------------------------
-# Paths (match dataset_prep.py conventions)
-# ---------------------------------------------------------------------
+#
+# Paths for my dataset prep
 
-# Resolve project root relative to this file (repo/scripts/..)
+
+# Resolving project root relative to this file (repo/scripts/..)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 # All figures go to results/
@@ -94,38 +72,41 @@ TEST_SPLIT_CSV = SPLITS_CSV_DIR / "test.csv"
 CLASS_ORDER = ["glioma", "meningioma", "pituitary", "notumor"]
 
 
-# ---------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------
+
+# Helpers I used
+
 
 def _pretty_class_name(c: str) -> str:
-    # Convert internal class key to report-friendly label
+    
+    # Converting internal class key to report-friendly label
     if c == "notumor":
         return "No tumour"
     return str(c).replace("_", " ").capitalize()
 
 
 def _prettify_classes(classes):
-    # Vectorized helper: apply _pretty_class_name to each class
+
+    # Vectorized helper: applying _pretty_class_name to each class
     return [_pretty_class_name(c) for c in classes]
 
 
 def _save_fig(fig: plt.Figure, stem_name: str):
+    
     """
-    Save both PNG (high DPI) and PDF (vector) for report use.
+    Saving both PNG (high DPI) and PDF (vector) for report use.
     """
-    # Ensure results/ exists
+    # Ensuring results/ exists
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Output filenames are consistent across formats
     png_path = RESULTS_DIR / f"{stem_name}.png"
     pdf_path = RESULTS_DIR / f"{stem_name}.pdf"
 
-    # Save with tight bounding box (avoids cropped labels)
+    # Saving with tight bounding box (avoids cropped labels)
     fig.savefig(png_path, bbox_inches="tight")
     fig.savefig(pdf_path, bbox_inches="tight")
 
-    # Close figure to avoid memory leaks in long runs
+    # Closing figure to avoid memory leaks in long runs
     plt.close(fig)
 
     # Console logs help confirm outputs
@@ -134,7 +115,8 @@ def _save_fig(fig: plt.Figure, stem_name: str):
 
 
 def _legend_labels_with_counts_and_pct(labels, counts):
-    # Builds legend entries like: "Glioma (n=123, 12.3%)"
+    
+    # Builds entries like: Glioma (n=123, 12.3%)
     total = float(np.sum(counts)) if np.sum(counts) > 0 else 1.0
     out = []
     for lab, n in zip(labels, counts):
@@ -144,10 +126,11 @@ def _legend_labels_with_counts_and_pct(labels, counts):
 
 
 def _donut(ax, counts, labels, title, colors=None):
+    
     """
     Donut chart with a clean legend showing both counts and percentages.
     """
-    # Ensure numeric
+    # Ensuring numeric
     counts = np.asarray(counts, dtype=float)
 
     # Pie chart wedges (labels hidden; legend used instead)
@@ -168,7 +151,7 @@ def _donut(ax, counts, labels, title, colors=None):
     ax.set_title(title)
     ax.axis("equal")
 
-    # Legend shows label + count + percent
+    # Legend shows label,  count and percent
     legend_labels = _legend_labels_with_counts_and_pct(labels, counts)
     ax.legend(
         wedges,
@@ -180,24 +163,25 @@ def _donut(ax, counts, labels, title, colors=None):
 
 
 def _barh_counts(ax, labels, counts, title, xlabel):
+    
     """
     Horizontal bar chart (paper-friendly for long labels) with value annotations.
     """
     # y positions for each label
     y = np.arange(len(labels))
 
-    # Draw bars
+    # Drawing bars
     ax.barh(y, counts)
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
 
-    # Invert so highest count appears at top (more readable)
+    # Inverting so highest count appears at top (more readable)
     ax.invert_yaxis()
 
     ax.set_xlabel(xlabel)
     ax.set_title(title)
 
-    # Pad for text annotations
+    # Padding for text annotations
     maxv = float(np.max(counts)) if len(counts) else 1.0
     pad = maxv * 0.01
 
@@ -207,10 +191,11 @@ def _barh_counts(ax, labels, counts, title, xlabel):
 
 
 def _barh_percent_with_counts(ax, labels, counts, title, xlabel="Percentage of images (%)"):
+    
     """
     Horizontal bar chart that shows percentages with count annotations.
     """
-    # Convert to numeric
+    # Converting to numeric
     counts = np.asarray(counts, dtype=float)
 
     # Total for percent conversion
@@ -222,7 +207,7 @@ def _barh_percent_with_counts(ax, labels, counts, title, xlabel="Percentage of i
     # y positions
     y = np.arange(len(labels))
 
-    # Draw bars in percentage space
+    # Drawing bars in percentage space
     ax.barh(y, perc)
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
@@ -235,14 +220,14 @@ def _barh_percent_with_counts(ax, labels, counts, title, xlabel="Percentage of i
     maxp = float(np.max(perc)) if len(perc) else 1.0
     pad = maxp * 0.01
 
-    # Annotate with "x.x% (n=...)"
+    # Annotate with x.x% (n=...)
     for i, (p, n) in enumerate(zip(perc, counts)):
         ax.text(float(p) + pad, i, f"{p:.1f}%  (n={int(n)})", va="center")
 
 
-# ---------------------------------------------------------------------
-# 1) Kaggle Training vs Testing donuts
-# ---------------------------------------------------------------------
+
+# Kaggle Training vs Testing donuts
+
 
 def plot_kaggle_training_testing_pies():
     # This plot describes the original Kaggle folders (before our Train/Val split).
@@ -251,21 +236,21 @@ def plot_kaggle_training_testing_pies():
         print("raw_class_counts_by_source.csv not found; skipping Kaggle donuts.")
         return
 
-    # Load counts per (source_split, class)
+    # Loading counts per (source_split, class)
     df = pd.read_csv(RAW_CLASS_COUNTS_PATH)
 
-    # Ensure consistent class order
+    # Ensuring consistent class order
     df = df[df["class"].isin(CLASS_ORDER)].copy()
 
     # Two subplots: Training and Testing
     fig, axes = plt.subplots(1, 2, figsize=(12, 4), constrained_layout=True)
 
-    # Use a categorical colormap and lock colors by class order
+    # Using a categorical colormap and lock colors by class order
     cmap = plt.get_cmap("Set2")
     colors = cmap(np.linspace(0, 1, len(CLASS_ORDER)))
     labels = _prettify_classes(CLASS_ORDER)
 
-    # Build a donut per split
+    # Building a donut per split
     for ax, split in zip(axes, ["training", "testing"]):
         sub = df[df["source_split"] == split].set_index("class").reindex(CLASS_ORDER)
         counts = sub["count"].fillna(0).to_numpy()
@@ -277,16 +262,17 @@ def plot_kaggle_training_testing_pies():
             colors=colors,
         )
 
-    # Save in results/ as PNG+PDF
+    # Saving in results/ as PNG+PDF
     _save_fig(fig, "kaggle_training_testing_pies")
 
 
-# ---------------------------------------------------------------------
-# 2) Our Train/Val/Test donuts (from dataset_summary.csv)
-# ---------------------------------------------------------------------
+
+# Our Train/Val/Test donuts (from dataset_summary.csv)
+
 
 def plot_our_split_pies():
-    # This plot describes our final split after deduplication + Train/Val creation.
+    
+    # This plot describes my final split after deduplication and Train/Val creation.
     # Data source: results/dataset_summary.csv
     if not DATASET_SUMMARY_PATH.exists():
         print("dataset_summary.csv not found; skipping split donuts.")
@@ -306,7 +292,7 @@ def plot_our_split_pies():
         sub = df[df["split"] == split].set_index("class").reindex(CLASS_ORDER)
         counts = sub["count"].fillna(0).to_numpy()
 
-        # Titles deliberately remind the reader what “test” means here
+        # Titles deliberately remind the reader what test means here
         if split == "test":
             subtitle = "Held-out Kaggle Testing"
         else:
@@ -323,12 +309,13 @@ def plot_our_split_pies():
     _save_fig(fig, "splits_class_pies")
 
 
-# ---------------------------------------------------------------------
-# 3) Overall class distribution (percent + counts)
-# ---------------------------------------------------------------------
+
+# Overall class distribution (percent and counts)
+
 
 def plot_overall_class_distribution_pct():
-    # Shows overall label balance after deduplication + final split.
+    
+    # Shows overall label balance after deduplication and final split.
     if not DATASET_SUMMARY_PATH.exists():
         print("dataset_summary.csv not found; skipping overall class distribution.")
         return
@@ -353,11 +340,12 @@ def plot_overall_class_distribution_pct():
     _save_fig(fig, "class_distribution_overall_pct")
 
 
-# ---------------------------------------------------------------------
-# 4) Quality flags per class (stacked percentage bars)
-# ---------------------------------------------------------------------
+
+# Quality flags per class (stacked percentage bars)
+
 
 def plot_quality_flags_pct():
+    
     # Shows how many images were flagged too_dark / too_bright / low_contrast / failed.
     # Data source: results/raw_image_stats.csv
     if not RAW_STATS_PATH.exists():
@@ -375,7 +363,7 @@ def plot_quality_flags_pct():
         if col not in stats.columns:
             stats[col] = False
 
-    # Aggregate counts of each flag per class
+    # Aggregating counts of each flag per class
     agg = (
         stats.groupby("class")[["too_dark", "too_bright", "low_contrast", "failed"]]
         .sum()
@@ -387,7 +375,7 @@ def plot_quality_flags_pct():
     # Total images per class (needed for percent conversion)
     total_per_class = stats.groupby("class").size().reindex(CLASS_ORDER).fillna(0).astype(int)
 
-    # Convert each flag count to a percent of that class
+    # Converting each flag count to a percent of that class
     pct = agg.div(total_per_class.replace(0, np.nan), axis=0).fillna(0.0) * 100.0
 
     labels = _prettify_classes(CLASS_ORDER)
@@ -426,11 +414,12 @@ def plot_quality_flags_pct():
     _save_fig(fig, "quality_flags_pct")
 
 
-# ---------------------------------------------------------------------
-# 5) Overall good vs suspect (donut)
-# ---------------------------------------------------------------------
+
+# Overall good vs suspect (donut)
+
 
 def plot_good_vs_suspect_overall_pie():
+    
     # Donut chart: how many images are typical vs suspect in the raw audit.
     if not RAW_STATS_PATH.exists():
         print("raw_image_stats.csv not found; skipping good vs suspect donut.")
@@ -456,12 +445,13 @@ def plot_good_vs_suspect_overall_pie():
     _save_fig(fig, "good_vs_suspect_overall_pie")
 
 
-# ---------------------------------------------------------------------
-# 6) Resolution distribution (top-K + Other)
-# ---------------------------------------------------------------------
+
+# Resolution distribution (top-K and Other)
+
 
 def plot_resolution_distribution_topk(max_bins: int = 8):
-    # Bar chart for the most common raw resolutions, plus "Other".
+    
+    # Bar chart for the most common raw resolutions, plus Other.
     if not RAW_RESOLUTION_SUMMARY_PATH.exists():
         print("raw_resolution_summary.csv not found; skipping resolution plot.")
         return
@@ -474,7 +464,7 @@ def plot_resolution_distribution_topk(max_bins: int = 8):
     res = res.sort_values("count", ascending=False).reset_index(drop=True)
     total = int(res["count"].sum())
 
-    # If too many unique resolutions, collapse tail into "Other"
+    # If too many unique resolutions, collapse tail into Other
     if len(res) > max_bins:
         top = res.head(max_bins - 1).copy()
         other_count = int(res["count"].iloc[max_bins - 1 :].sum())
@@ -499,11 +489,11 @@ def plot_resolution_distribution_topk(max_bins: int = 8):
     _save_fig(fig, "resolution_distribution_topk")
 
 
-# ---------------------------------------------------------------------
-# 7) Resolution distribution donut (top-N + Other)
-# ---------------------------------------------------------------------
+# 7) Resolution distribution donut (top-N and Other)
+
 
 def plot_resolution_distribution_all_pie(top_n: int = 10):
+    
     # Donut chart version of resolution distribution.
     if not RAW_RESOLUTION_SUMMARY_PATH.exists():
         print("raw_resolution_summary.csv not found; skipping resolution donut.")
@@ -537,11 +527,12 @@ def plot_resolution_distribution_all_pie(top_n: int = 10):
     _save_fig(fig, "resolution_distribution_all_pie")
 
 
-# ---------------------------------------------------------------------
-# 8) Duplicate removal effect
-# ---------------------------------------------------------------------
+
+# Duplicate removal effect
+
 
 def plot_duplicates_effect_bar():
+    
     # Visualizes how many duplicate entries were removed by SHA1 deduplication.
     if not DUPLICATE_SUMMARY_PATH.exists() or not DATASET_SUMMARY_PATH.exists():
         print("duplicate_summary.csv or dataset_summary.csv missing; skipping duplicates plot.")
@@ -570,15 +561,15 @@ def plot_duplicates_effect_bar():
     _save_fig(fig, "duplicates_effect_bar")
 
 
-# ---------------------------------------------------------------------
-# 9) Split x class heatmap
-# ---------------------------------------------------------------------
+
+# Split x class heatmap
+
 def plot_split_class_heatmap():
     """
-    Publication-style heatmap of counts per (class × split) from dataset_summary.csv.
+    Heatmap of counts per (class × split) from dataset_summary.csv.
     (Self-contained: does not depend on _prettify_categories)
     """
-    # Read final summary counts
+    # Reading final summary counts
     df = pd.read_csv(DATASET_SUMMARY_PATH)
     df = df[df["class"].isin(CLASS_ORDER)].copy()
 
@@ -588,7 +579,7 @@ def plot_split_class_heatmap():
     pivot = pivot.reindex(columns=["train", "val", "test"])
     pivot = pivot.fillna(0).astype(int)
 
-    # Pretty labels for plot axes
+    # labels for plot axes
     label_map = {
         "glioma": "Glioma",
         "meningioma": "Meningioma",
@@ -648,7 +639,7 @@ def plot_split_class_heatmap():
                 color=text_color,
             )
 
-    # Save PNG (this function saves only PNG; your other helper saves PNG+PDF)
+    # Save PNG (this function saves only PNG; other helper saves PNG and PDF i did earlier)
     fig.tight_layout()
     out_path = RESULTS_DIR / "split_class_heatmap.png"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -656,12 +647,13 @@ def plot_split_class_heatmap():
     plt.close(fig)
     print(f"Saved figure: {out_path}")
 
-# ---------------------------------------------------------------------
-# 10) Example grid: one example per class
-# ---------------------------------------------------------------------
+
+# Example grid: one example per class
+
 
 def _load_any_image(path: str, size=(256, 256)) -> Image.Image:
-    # Load and resize any image to a consistent thumbnail size for grids
+    
+    # Loading and resize any image to a consistent thumbnail size for grids
     img = Image.open(path).convert("RGB")
     return img.resize(size)
 
@@ -703,7 +695,7 @@ def create_example_per_class_grid(out_stem="examples_per_class", seed=42):
         stats = pd.read_csv(RAW_STATS_PATH)
         stats = stats[stats["class"].isin(CLASS_ORDER)].copy()
 
-        # Avoid failed-to-load images
+        # Avoiding failed-to-load images
         if "failed" in stats.columns:
             stats = stats[~stats["failed"]].copy()
 
@@ -747,9 +739,9 @@ def create_example_per_class_grid(out_stem="examples_per_class", seed=42):
     _save_fig(fig, out_stem)
 
 
-# ---------------------------------------------------------------------
-# 11) Example grid: typical vs atypical/suspect (raw audit view)
-# ---------------------------------------------------------------------
+
+# Example grid: typical vs atypical/suspect (raw audit view)
+
 def create_example_good_vs_weird_grid(
     n_good=4,
     n_weird=4,
@@ -757,9 +749,9 @@ def create_example_good_vs_weird_grid(
     seed=42,
 ):
     """
-    Two-row grid with an OUTSIDE label column (paper-style).
+    Two-row grid with an OUTSIDE label column 
 
-    Uses raw_image_stats.csv because suspect flags + raw resolution come from the raw audit.
+    Uses raw_image_stats.csv because suspect flags and raw resolution come from the raw audit.
     """
     if not RAW_STATS_PATH.exists():
         print("raw_image_stats.csv not found; skipping good vs weird grid.")
@@ -768,7 +760,7 @@ def create_example_good_vs_weird_grid(
     np.random.seed(seed)
     stats = pd.read_csv(RAW_STATS_PATH).copy()
 
-    # Remove failed loads
+    # Removing failed loads
     if "failed" in stats.columns:
         stats = stats[~stats["failed"]].copy()
 
@@ -781,7 +773,7 @@ def create_example_good_vs_weird_grid(
     dom_w, dom_h = res_counts.index[0]
     dominant_mask = (stats["width"] == dom_w) & (stats["height"] == dom_h)
 
-    # Define good vs weird candidates based on dominant resolution and suspect flags
+    # Defining good vs weird candidates based on dominant resolution and suspect flags
     if "suspect" in stats.columns:
         good_candidates = stats[dominant_mask & (~stats["suspect"])].copy()
         weird_candidates = stats[(~dominant_mask) | (stats["suspect"])].copy()
@@ -808,7 +800,7 @@ def create_example_good_vs_weird_grid(
         print("No images available for good vs weird grid.")
         return
 
-    # Layout: 2 rows × (1 label column + N image columns)
+    # Layout: 2 rows × (1 label column and N image columns)
     fig_w = 2.35 * ncols + 4.0
     fig_h = 6.0
     fig = plt.figure(figsize=(fig_w, fig_h))
@@ -882,21 +874,21 @@ def create_example_good_vs_weird_grid(
 
     _save_fig(fig, out_stem)
 
-# ---------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------
+
 
 def main():
-    """
-    Orchestrates generation of all dataset figures.
-    """
+    
+   
+    
     # Hard requirements: prep must have been run
+    
     if not DATASET_SUMMARY_PATH.exists():
         raise FileNotFoundError(f"{DATASET_SUMMARY_PATH} not found. Run dataset_prep.py first.")
     if not RAW_STATS_PATH.exists():
         raise FileNotFoundError(f"{RAW_STATS_PATH} not found. Run dataset_prep.py first.")
 
-    # Print a small summary so logs show what dataset size we're plotting
+    # Printing a small summary so logs show what dataset size I'm plotting
     summary = pd.read_csv(DATASET_SUMMARY_PATH)
     total_images = int(summary["count"].sum())
     per_split = summary.groupby("split")["count"].sum()
@@ -908,7 +900,7 @@ def main():
     # Kaggle Training vs Testing donuts
     plot_kaggle_training_testing_pies()
 
-    # Our final Train/Val/Test donuts (Kaggle-aligned)
+    # my final Train/Val/Test donuts
     plot_our_split_pies()
 
     # Class distribution and quality
@@ -916,7 +908,7 @@ def main():
     plot_quality_flags_pct()
     plot_good_vs_suspect_overall_pie()
 
-    # Resolution + duplicates
+    # Resolution and duplicates
     plot_resolution_distribution_topk()
     plot_resolution_distribution_all_pie()
     plot_duplicates_effect_bar()

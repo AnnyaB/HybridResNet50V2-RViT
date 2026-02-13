@@ -1,7 +1,11 @@
+
+
 # This is an example script to generate and save a confusion matrix plot
 # similar to the one presented in the paper.
 # I used this to recreate the confusion matrices generated frm the training runs since those generated were low resolution and
 # were barely readable. 
+
+# IT IS REPRODUCIBLE AND CAN BE USED TO GENERATE PLOTS, SINCE IT HELPED ME OUT, I KEPT IT HERE AS IT IS FOR FUTURE REFERENCE.
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +22,7 @@ classes = ["Glioma", "Meningioma", "Pituitary", "No Tumor"]
 
 fig, ax = plt.subplots(figsize=(7.5, 7.5))
 
-# Use the same clean blue style as the paper
+# Using the same clean blue style as the paper
 im = ax.imshow(cm, cmap=plt.cm.Blues)
 
 # Colorbar (simple, unobtrusive)
@@ -50,7 +54,7 @@ for i in range(cm.shape[0]):
             color="white" if cm[i, j] > thresh else "black"
         )
 
-# Remove spines for cleaner look
+# Removing spines for cleaner look
 for spine in ax.spines.values():
     spine.set_visible(False)
 

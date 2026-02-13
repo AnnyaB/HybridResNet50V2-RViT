@@ -1,78 +1,25 @@
-# dataset_prep.py
-# I started working on dataset preparation from 12th november 2025
+# THIS IS THE MAIN FILE FOR DATASET PREPROCESSING 
+# I'VE DONE HERE SEVERAL STEPS TAKING GUIDANCE FROM MY DR KOAY AND THE PAPERS
+# IT DOESN'T DO TOO MUCH TO MAKE THE IMAGES POLISHED FOR TRAINING AND TESTING SINCE THE IDEA IS TO KEEP IT QUITE GENERALIZED
+# IT DOES CROPPING, RESIZING, CONVERTING TO RGB, SPLITTING, AND DUPLICATE REMOVAL IN A LEAKAGE-SAFE WAY, 
+# AND ALSO ANALYZES THE RAW IMAGES TO FLAG ANY POTENTIAL QUALITY ISSUES (FAILED LOADS, TOO DARK/BRIGHT, LOW CONTRAST) 
+# WITHOUT DROPPING ANY IMAGES (FLAGS ONLY). NO AUGMENTATION OR INTENSITY NORMALIZATION IS DONE HERE, 
+# AS I WANT TO KEEP THIS STEP AS SIMPLE AND GENERAL AS POSSIBLE.
+# FIND MORE ABOUT USING LANCZOS RESAMPLING HERE - https://github.com/jeffboody/Lanczos
+# FOR SHA1 SEE https://docs.python.org/3/library/hashlib.html
 
-# -------------------------------------------------------------------
-# dataset preparation pipeline (what I already did)
-#
-# In this script I had:
-#   - walked the original Kaggle brain tumour MRI folders and recorded
-#     every file path together with its class and Kaggle split
-#     (Training / Testing),
-#   - computed SHA1 hashes to detect and remove exact byte-for-byte
-#     duplicate files, while also saving a detailed duplicate summary,
-#   - audited every deduplicated raw image for geometry and intensity:
-#       – width, height, aspect ratio,
-#       – mean / std / min / max grayscale intensity,
-#       – conservative flags for too dark, too bright, low contrast,
-#         and a combined "suspect" quality flag,
-#   - produced CSV summaries for raw resolutions and quality flags so
-#     that I could describe the original dataset objectively in the
-#     report,
-#   - created a *leakage-safe* split aligned to Kaggle's intended protocol:
-#       - Kaggle Training -> stratified Train/Val
-#       - Kaggle Testing  -> held-out Test (never used for training)
-#   - defined a tight brain-cropping function that removed black
-#     background based on an intensity threshold plus a small margin,
-#   - applied this crop to every image in the split, resized to
-#     224x224 (matching ImageNet / ResNet50V2 / RViT defaults),
-#     converted to RGB, and saved them into a clean
-#     data/processed/tightcrop/{split}/{class}/ structure,
-#   - saved train/val/test CSVs that point to these cropped 224×224
-#     images (for model training and evaluation),
-#   - saved an overall split summary CSV with per-class counts per
-#     split, which I later used to generate figures in dataset_plots.py.
-#
-# This file therefore gave me a single, reproducible, auditable
-# pipeline from raw Kaggle folders -> cleaned, cropped 224x224 dataset
-# and analysis artefacts for the project's methodology section.
-# -------------------------------------------------------------------
-
-"""
-Dataset preparation script for HybridResNet50V2–RViT brain tumour classification.
-
-This file builds one reproducible pipeline that:
-
-  - walks the raw Kaggle folders and records exactly what is there,
-  - removes byte-for-byte duplicate files using SHA1 with a leakage-safe policy
-    (prefer keeping Kaggle Testing copies when duplicates exist across splits),
-  - audits raw images for geometry and intensity problems
-    (so we can describe “suspect” images with evidence),
-  - creates a Kaggle-aligned evaluation protocol:
-      * Kaggle Training -> stratified Train/Val split (default 80/20),
-      * Kaggle Testing  -> held-out Test set,
-  - and finally writes *cropped* 224×224 RGB images and CSVs for model training.
-
-Important design decisions:
-
-  - All model training uses only the cropped 224×224 images.
-  - Cropping is done first (tight crop around brain region), then resized to 224×224.
-  - The audit (intensity, duplicates) is always done on the raw
-    uncropped images so we can describe the original dataset properly.
-  - Exact duplicates are removed BEFORE splitting, and duplicates that cross
-    Training/Testing are resolved by keeping the Testing copy to avoid leakage.
-"""
-
-# Standard library imports (OS/filesystem, hashing, math utilities)
+# Libraries I needed 
+# (OS/filesystem, hashing, math utilities)
 import os
 from pathlib import Path
 import hashlib
 import math
 
-# Third-party imports:
+
 # - numpy: numeric ops, image arrays, stats
-# - PIL: image I/O + EXIF orientation safety + conversions
+# - PIL: image I/O + EXIF orientation safety and conversions
 # - sklearn: stratified splitting
-# - pandas: tabular DataFrames + CSV output
+# - pandas: tabular DataFrames and CSV output
 # - tqdm: progress bars (makes long loops visible)
 import numpy as np
 from PIL import Image, ImageOps
@@ -81,17 +28,16 @@ import pandas as pd
 from tqdm import tqdm
 
 
-# -------------------------------------------------------------------
 # CONFIGURATION SECTION
-# -------------------------------------------------------------------
+
 
 # PROJECT_ROOT is set to the repository root by going up one level from this file:
 # e.g. project/scripts/dataset_prep.py -> project/
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# RAW_ROOT points to your raw Kaggle dataset folder structure.
-# This script assumes you placed the Kaggle dataset under:
-# data/raw/brain-tumor-mri-dataset/kaggle_brain_mri_scan_dataset/
+# RAW_ROOT points to my raw Kaggle dataset folder structure.
+# This script assumes I placed the Kaggle dataset under:
+# data/raw/brain-tumor-mri-dataset/kaggle_brain_mri_scan_dataset/ (WHERE IT IS ACTUALLY)
 RAW_ROOT = (
     PROJECT_ROOT
     / "data"
@@ -133,10 +79,12 @@ RANDOM_STATE = 42
 # Kaggle-aligned split:
 # - Kaggle Training -> Train/Val split (stratified)
 # - Kaggle Testing  -> Test set (held-out)
-VAL_FRACTION_OF_TRAINING = 0.20   # 80/20 split inside Kaggle Training
+VAL_FRACTION_OF_TRAINING = 0.20   # 80/20 split inside Kaggle Training (Same as Krishnan et al 2024)
 
 # Dedup policy:
-# If an exact duplicate exists in BOTH Training and Testing, keep Testing copy.
+# If an exact duplicate exists in BOTH Training and Testing, keep Testing copy, it's the safer choice for leakage prevention 
+# (Training is more likely to be used in data augmentation or be accidentally included in validation 
+# if Icreated a new test split from Training).
 PREFER_TESTING_ON_CROSS_SPLIT_DUPLICATES = True
 
 # Tight crop parameters:
@@ -150,9 +98,10 @@ ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 
 def _get_resample():
+    
     """
     Pillow version compatibility: Image.Resampling exists in newer versions.
-    We pick LANCZOS for best downsampling quality.
+    I pick LANCZOS for best downsampling quality.
     """
     # Newer Pillow: Image.Resampling.LANCZOS exists
     try:
@@ -166,18 +115,18 @@ def _get_resample():
 RESAMPLE = _get_resample()
 
 
-# -------------------------------------------------------------------
 # COLLECTING RAW IMAGE PATHS
-# -------------------------------------------------------------------
+
 
 def collect_images() -> pd.DataFrame:
+    
     """
-    Walk through the raw Kaggle folders and build a DataFrame.
+    Walking through the raw Kaggle folders and building a DataFrame.
 
     For each file record:
       - orig_path    : full path on disk
       - class        : glioma / meningioma / pituitary / notumor
-      - source_split : "training" or "testing" (Kaggle's folder)
+      - source_split : training or testing (Kaggle's folder)
     """
     # records accumulates one dict per image file found
     records = []
@@ -192,30 +141,30 @@ def collect_images() -> pd.DataFrame:
             if not folder.exists():
                 continue
 
-            # Iterate through files in the class folder
+            # Iterating through files in the class folder
             for p in folder.iterdir():
-                # Skip directories; keep only files
+                # Skipping directories; keep only files
                 if not p.is_file():
                     continue
 
-                # Skip hidden/system files
+                # Skipping hidden/system files
                 if p.name.startswith("."):
                     continue
 
-                # Skip non-image extensions
+                # Skipping non-image extensions
                 if p.suffix.lower() not in ALLOWED_EXTS:
                     continue
 
-                # Record file path + label + source split
+                # Recording file path, label and source split
                 records.append(
                     {
                         "orig_path": str(p),               # absolute/relative string path
                         "class": cls,                      # folder name = class label
-                        "source_split": split.lower(),     # "training" / "testing"
+                        "source_split": split.lower(),     # training / testing
                     }
                 )
 
-    # Convert list of dicts to a DataFrame for easy grouping/filtering later
+    # Converting list of dicts to a DataFrame for easy grouping/filtering later
     df = pd.DataFrame(records)
 
     # Immediate visibility: how many raw files exist before deduplication
@@ -224,8 +173,9 @@ def collect_images() -> pd.DataFrame:
 
 
 def save_raw_class_counts(df: pd.DataFrame):
+    
     """
-    Summarise how many images there are per class in Kaggle's
+    Summarising how many images there are per class in Kaggle's
     original Training vs Testing folders.
 
     Output: results/raw_class_counts_by_source.csv
@@ -238,7 +188,7 @@ def save_raw_class_counts(df: pd.DataFrame):
         print("No images found; raw class counts not saved.")
         return
 
-    # Count rows grouped by (source_split, class)
+    # Counting rows grouped by (source_split, class)
     counts = (
         df.groupby(["source_split", "class"])
         .size()
@@ -246,43 +196,44 @@ def save_raw_class_counts(df: pd.DataFrame):
         .sort_values(["source_split", "class"])
     )
 
-    # Save to CSV for your report/plots
+    # Saving to CSV for my report
     counts.to_csv(RAW_CLASS_COUNTS_PATH, index=False)
 
-    # Log output for verification
+    # Logging output for verification
     print(f"Saved raw class counts (by Kaggle split) to {RAW_CLASS_COUNTS_PATH}")
     print(counts)
 
 
-# -------------------------------------------------------------------
+
 # EXACT DUPLICATE REMOVAL (SHA1) - LEAKAGE SAFE
-# -------------------------------------------------------------------
+
 
 def sha1_of_file(path: str, block_size: int = 65536) -> str:
     """
     Compute SHA1 hash of a file.
     If two files have the same SHA1, they are byte-for-byte identical.
     """
-    # Create SHA1 hasher object
+    # Creating SHA1 hasher object
     h = hashlib.sha1()
 
-    # Open file in binary mode (hash must reflect bytes)
+    # Opening file in binary mode (hash must reflect bytes)
     with open(path, "rb") as f:
-        # Read file in blocks (memory-safe for big files)
+        # Reading file in blocks (memory-safe for big files)
         for chunk in iter(lambda: f.read(block_size), b""):
             h.update(chunk)
 
-    # Return hex digest string
+    # Returning hex digest string
     return h.hexdigest()
 
 def processed_filename_for(orig_path: str) -> str:
+    
     """
-    Build a unique, deterministic filename for the processed image
+    Building a unique, deterministic filename for the processed image
     to avoid collisions (same src.name in different folders).
 
-    We use SHA1(file_bytes) + original extension.
+    I use SHA1(file_bytes) and original extension.
     """
-    # Convert to Path for suffix handling
+    # Converting to Path for suffix handling
     p = Path(orig_path)
 
     # Filename is SHA1 hash plus normalized extension
@@ -290,12 +241,13 @@ def processed_filename_for(orig_path: str) -> str:
 
 
 def drop_duplicates_leakage_safe(df: pd.DataFrame):
+    
     """
-    Remove exact duplicate files based on SHA1, using a leakage-safe policy.
+    Removing exact duplicate files based on SHA1, using a leakage-safe policy.
 
     Key rule:
-      - If a duplicate group spans BOTH Kaggle Training and Kaggle Testing,
-        we KEEP the Testing copy and DROP the Training copy(s).
+      - If a duplicate group spans both Kaggle Training and Kaggle Testing,
+        I KEEP the Testing copy and DROP the Training copy(s).
 
     Returns:
       - dedup_df : DataFrame of kept rows only (unique SHA1)
@@ -308,19 +260,19 @@ def drop_duplicates_leakage_safe(df: pd.DataFrame):
 
     print("Computing SHA1 hashes for duplicate detection...")
 
-    # Work on a copy to avoid mutating caller’s DataFrame
+    # Working on a copy to avoid mutating caller’s DataFrame
     df = df.copy()
 
-    # Add SHA1 column computed from file bytes for each path
+    # Adding SHA1 column computed from file bytes for each path
     df["sha1"] = df["orig_path"].apply(sha1_of_file)
 
-    # Track count before deduplication
+    # Tracking count before deduplication
     before = len(df)
 
-    # Mark duplicates: duplicated(..., keep=False) flags ALL members of a dup group
+    # Marking duplicates: duplicated(..., keep=False) flags all members of a dup group
     dup_mask = df.duplicated(subset="sha1", keep=False)
 
-    # Extract just the duplicate rows for auditing/reporting
+    # Extracting just the duplicate rows for auditing/reporting
     dups_df = df[dup_mask].copy()
 
     # If no duplicates detected, return df as-is
@@ -333,24 +285,24 @@ def drop_duplicates_leakage_safe(df: pd.DataFrame):
     # keep_indices stores the single chosen representative row index per SHA1 group
     keep_indices = []
 
-    # Iterate over each SHA1 group deterministically
+    # Iterating over each SHA1 group deterministically
     for sha1, group in dups_df.groupby("sha1"):
-        # Sort for deterministic behaviour across OS/filesystems
+        # Sorting for deterministic behaviour across OS/filesystems
         g = group.sort_values(["source_split", "orig_path"]).copy()
 
-        # Detect whether this group contains any testing/training copies
+        # Detecting whether this group contains any testing/training copies
         has_testing = (g["source_split"] == "testing").any()
         has_training = (g["source_split"] == "training").any()
 
-        # Leakage-safe rule: if group spans training+testing, keep testing copy
+        # Leakage-safe rule: if group spans training and testing, keep testing copy
         if PREFER_TESTING_ON_CROSS_SPLIT_DUPLICATES and has_testing and has_training:
-            # Keep ONE testing copy (smallest path ensures determinism)
+            # Keeping ONE testing copy (smallest path ensures determinism)
             keep_row = g[g["source_split"] == "testing"].sort_values("orig_path").iloc[0]
         else:
             # Otherwise, keep ONE copy (smallest path overall)
             keep_row = g.sort_values("orig_path").iloc[0]
 
-        # Store original DataFrame index of chosen keep_row
+        # Storing original DataFrame index of chosen keep_row
         keep_indices.append(int(keep_row.name))
 
     # non_dup_df: all unique rows that are not part of any duplicate group
@@ -359,25 +311,25 @@ def drop_duplicates_leakage_safe(df: pd.DataFrame):
     # kept_from_dups_df: one representative row per duplicate group
     kept_from_dups_df = df.loc[keep_indices].copy()
 
-    # Concatenate uniques + chosen dup representatives -> final deduplicated df
+    # Concatenating uniques and chosen dup representatives -> final deduplicated df
     dedup_df = pd.concat([non_dup_df, kept_from_dups_df], axis=0).reset_index(drop=True)
 
-    # Track after deduplication
+    # Tracking after deduplication
     after = len(dedup_df)
 
-    # Print deduplication effect
+    # Printing deduplication effect
     print(f"Unique files after deduplication: {after}")
     print(f"Removed {before - after} duplicate file entries (if any).")
 
-    # Augment dups_df with keep/drop info for auditing
+    # Augmenting dups_df with keep/drop info for auditing
     dups_df = dups_df.copy()
     dups_df["kept"] = False
 
-    # Mark which rows were kept (by original index)
+    # Marking which rows were kept (by original index)
     kept_set = set(keep_indices)
     dups_df.loc[dups_df.index.isin(kept_set), "kept"] = True
 
-    # For each SHA1 group, store the kept path (helps auditing in your report)
+    # For each SHA1 group, storing the kept path (helps auditing in my report)
     kept_path_by_sha1 = (
         dups_df[dups_df["kept"]]
         .set_index("sha1")["orig_path"]
@@ -389,6 +341,7 @@ def drop_duplicates_leakage_safe(df: pd.DataFrame):
 
 
 def save_duplicate_summary(dups_df: pd.DataFrame):
+    
     """
     Write detailed information about exact duplicates:
 
@@ -396,7 +349,7 @@ def save_duplicate_summary(dups_df: pd.DataFrame):
                                including which one was kept
       - duplicate_summary.csv : one row per SHA1 group
     """
-    # Ensure results/ exists
+    # Ensuring results/ exists
     DUPLICATES_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # If no duplicates, nothing to write
@@ -404,11 +357,11 @@ def save_duplicate_summary(dups_df: pd.DataFrame):
         print("No duplicate files to save.")
         return
 
-    # Save full listing of every file in every duplicate group
+    # Saving full listing of every file in every duplicate group
     dups_df.to_csv(DUPLICATES_PATH, index=False)
     print(f"Saved full duplicate listing to {DUPLICATES_PATH}")
 
-    # Build a compact summary per SHA1 group (useful in report)
+    # Building a compact summary per SHA1 group (useful in report)
     rows = []
     for sha1, group in dups_df.groupby("sha1"):
         group = group.copy()
@@ -419,7 +372,7 @@ def save_duplicate_summary(dups_df: pd.DataFrame):
 
         # Flags:
         # - crosses_splits: duplicate appears in both training & testing
-        # - crosses_classes: same bytes appear under different class labels (rare but important!)
+        # - crosses_classes: same bytes appear under different class labels (rare but important :!)
         crosses_splits = group["source_split"].nunique() > 1
         crosses_classes = group["class"].nunique() > 1
 
@@ -433,27 +386,27 @@ def save_duplicate_summary(dups_df: pd.DataFrame):
                 "classes": ";".join(sorted(group["class"].unique())),
                 "source_splits": ";".join(sorted(group["source_split"].unique())),
                 "kept_path": kept_path,
-                # include a small sample of dropped paths (prevents huge CSV cells)
+                # including a small sample of dropped paths (prevents huge CSV cells)
                 "dropped_paths_example": "; ".join(group[~group["kept"]]["orig_path"].head(5)),
             }
         )
 
-    # Create DataFrame sorted by largest duplicate groups first
+    # Creating DataFrame sorted by largest duplicate groups first
     summary_df = pd.DataFrame(rows).sort_values("n_files", ascending=False)
 
-    # Save compact summary
+    # Saving compact summary
     summary_df.to_csv(DUPLICATE_SUMMARY_PATH, index=False)
 
-    # Print preview for sanity check
+    # Printing preview for sanity check
     print(f"Saved duplicate summary to {DUPLICATE_SUMMARY_PATH}")
     print(summary_df.head())
 
 
-# -------------------------------------------------------------------
 # RAW IMAGE ANALYSIS (GEOMETRY and INTENSITY)
-# -------------------------------------------------------------------
+
 
 def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
+    
     """
     Audit each deduplicated raw image before resizing.
 
@@ -470,9 +423,9 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
     records = []
     print("Analysing raw image geometry and intensity statistics...")
 
-    # Iterate through images with a progress bar
+    # Iterating through images with a progress bar
     for row in tqdm(df.to_dict(orient="records"), desc="Analysing raw images"):
-        # Extract metadata from row
+        # Extracting metadata from row
         path = row["orig_path"]
         cls = row["class"]
         source_split = row["source_split"]
@@ -486,20 +439,20 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
         failed = False
 
         try:
-            # Open image
+            # Opening image
             img = Image.open(path)
 
             # Fix orientation using EXIF metadata (avoids rotated stats)
             img = ImageOps.exif_transpose(img)
 
-            # Force decode now so corrupt images fail inside try/except
+            # Forcing decode now so corrupt images fail inside try/except
             img.load()
 
             # Geometry
             width, height = img.size
             aspect_ratio = (width / height) if height else np.nan
 
-            # Convert to grayscale and compute intensity stats
+            # Converting to grayscale and compute intensity stats
             gray = img.convert("L")
             arr = np.array(gray, dtype=np.float32)
 
@@ -513,7 +466,7 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
             print(f"Failed to analyse {path}: {e}")
             failed = True
 
-        # Append audit record regardless of failed or not
+        # Appending audit record regardless of failed or not
         records.append(
             {
                 "orig_path": path,
@@ -531,13 +484,13 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
             }
         )
 
-    # Convert list of audit dicts to DataFrame
+    # Converting list of audit dicts to DataFrame
     stats_df = pd.DataFrame(records)
 
     # Convenience mask: only consider quality flags if image loaded successfully
     not_failed = ~stats_df["failed"]
 
-    # Conservative "too dark" flag:
+    # Conservative too dark flag:
     # - low mean AND low max suggests mostly black image
     stats_df["too_dark"] = (
         not_failed
@@ -545,7 +498,7 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
         & (stats_df["max_intensity"] < 60)
     )
 
-    # Conservative "too bright" flag:
+    # Conservative too bright flag:
     # - very high mean AND high min suggests washed-out bright image
     stats_df["too_bright"] = (
         not_failed
@@ -556,7 +509,7 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
     # Low contrast flag: standard deviation extremely small
     stats_df["low_contrast"] = not_failed & (stats_df["std_intensity"] < 5)
 
-    # Combine quality issues into one "suspect" flag
+    # Combine quality issues into one suspect flag
     stats_df["suspect"] = (
         stats_df["too_dark"]
         | stats_df["too_bright"]
@@ -568,13 +521,14 @@ def analyze_raw_images(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_raw_analysis(stats_df: pd.DataFrame):
+    
     """
-    Save raw-image analysis to:
+    Saving raw-image analysis to:
       - raw_image_stats.csv
       - raw_resolution_summary.csv
       - raw_quality_flags_summary.csv
     """
-    # Ensure results/ exists
+    # Ensuring results/ exists
     RAW_STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # Defensive: nothing to save
@@ -582,11 +536,11 @@ def save_raw_analysis(stats_df: pd.DataFrame):
         print("No stats to save; stats_df is empty.")
         return
 
-    # Save full per-image stats
+    # Saving full per-image stats
     stats_df.to_csv(RAW_STATS_PATH, index=False)
     print(f"Saved raw image stats to {RAW_STATS_PATH}")
 
-    # Summarise resolutions (width,height) frequencies
+    # Summarising resolutions (width,height) frequencies
     res_summary = (
         stats_df.groupby(["width", "height"])
         .size()
@@ -598,7 +552,7 @@ def save_raw_analysis(stats_df: pd.DataFrame):
     print("Top 5 most common resolutions:")
     print(res_summary.head())
 
-    # Summarise quality flags per class by summing boolean columns
+    # Summarising quality flags per class by summing boolean columns
     qual_summary = (
         stats_df.groupby("class")[["too_dark", "too_bright", "low_contrast", "suspect", "failed"]]
         .sum()
@@ -608,60 +562,62 @@ def save_raw_analysis(stats_df: pd.DataFrame):
     print(f"Saved quality flags summary to {RAW_QUALITY_SUMMARY_PATH}")
     print(qual_summary)
 
-    # Print total suspect count for quick inspection
+    # Printing total suspect count for quick inspection
     total_suspect = int(stats_df["suspect"].sum())
     print(f"Total suspect images (any flag or failed): {total_suspect}")
 
 
-# -------------------------------------------------------------------
+
 # TIGHT BRAIN CROPPING - KAGGLE-ALIGNED SPLITS - RESIZED IMAGES
-# -------------------------------------------------------------------
+
 
 def tight_crop_to_brain(img: Image.Image) -> Image.Image:
+    
     """
     Crop away black background around the brain using a simple intensity mask.
     If no foreground pixels are found, return the original image.
     """
-    # Convert to grayscale for background detection (intensity-based)
+    # Converting to grayscale for background detection (intensity-based)
     gray = img.convert("L")
     arr = np.array(gray, dtype=np.uint8)
 
-    # Foreground mask: pixels above the threshold are treated as "content"
+    # Foreground mask: pixels above the threshold are treated as content
     mask = arr > BACKGROUND_INTENSITY_THRESHOLD
 
     # If mask has no foreground pixels, cropping would be unsafe -> return original
     if not mask.any():
         return img
 
-    # Find coordinates of all foreground pixels
+    # Finding coordinates of all foreground pixels
     ys, xs = np.where(mask)
 
-    # Build bounding box around foreground, with margin, clamped to image bounds
+    # Building bounding box around foreground, with margin, clamped to image bounds
     y_min = max(int(ys.min()) - CROP_MARGIN, 0)
     y_max = min(int(ys.max()) + 1 + CROP_MARGIN, arr.shape[0])
 
     x_min = max(int(xs.min()) - CROP_MARGIN, 0)
     x_max = min(int(xs.max()) + 1 + CROP_MARGIN, arr.shape[1])
 
-    # Crop uses (left, upper, right, lower)
+    # Cropping uses (left, upper, right, lower)
     return img.crop((x_min, y_min, x_max, y_max))
 
 
 def make_splits_kaggle_aligned(df: pd.DataFrame):
+    
     """
-    Create leakage-safe, Kaggle-aligned splits:
+    Creating splits:
 
       - Train/Val are created ONLY from Kaggle Training images (stratified).
       - Test is the Kaggle Testing folder (held-out, no splitting).
 
     This is the correct evaluation setup for this Kaggle dataset:
-    we do NOT create a new test set from Training because Kaggle already provides one.
+    I do not create a new test set from Training because Kaggle already provides one.
     """
     # Can't split empty dataset
     if df.empty:
         raise ValueError("Cannot split an empty dataset.")
 
-    # Separate sources exactly as Kaggle intended
+    # Separating sources exactly as Kaggle intended
     df_train_source = df[df["source_split"] == "training"].copy()
     df_test_source  = df[df["source_split"] == "testing"].copy()
 
@@ -685,6 +641,7 @@ def make_splits_kaggle_aligned(df: pd.DataFrame):
             random_state=RANDOM_STATE,
         )
     except Exception as e:
+        
         # Robust fallback: if stratify fails, still split deterministically
         print(f"WARNING: Stratified split failed ({e}). Falling back to non-stratified split.")
         X_train, X_val, y_train, y_val = train_test_split(
@@ -717,7 +674,7 @@ def make_splits_kaggle_aligned(df: pd.DataFrame):
         }
     )
 
-    # Print split sizes for verification
+    # Printing split sizes for verification
     print("Split sizes (Kaggle-aligned, after deduplication):")
     print(f"  Train (from Kaggle Training): {len(df_train)}")
     print(f"  Val   (from Kaggle Training): {len(df_val)}")
@@ -727,14 +684,15 @@ def make_splits_kaggle_aligned(df: pd.DataFrame):
 
 
 def prepare_processed_dirs():
+    
     """
-    Ensure canonical directory structure exists for the cropped variant:
+    Ensuring canonical directory structure exists for the cropped variant:
 
         data/processed/tightcrop/train/{class}/
         data/processed/tightcrop/val/{class}/
         data/processed/tightcrop/test/{class}/
     """
-    # Create all split/class directories ahead of processing
+    # Creating all split/class directories ahead of processing
     for split in ["train", "val", "test"]:
         for cls in CLASSES:
             out_dir = PROCESSED_ROOT / split / cls
@@ -742,22 +700,23 @@ def prepare_processed_dirs():
 
 
 def resize_and_copy(df_split: pd.DataFrame, split_name: str):
+    
     """
-    Create the processed dataset:
+    Creating the processed dataset:
 
-      - read raw image
+      - reading raw image
       - exif_transpose (safety)
-      - tight crop around brain
-      - resize to IMG_SIZE (224x224) using LANCZOS
-      - convert to RGB
-      - save into data/processed/tightcrop/{split}/{class}/
+      - tight cropping around brain
+      - resizing to IMG_SIZE (224x224) using LANCZOS
+      - converting to RGB
+      - saving into data/processed/tightcrop/{split}/{class}/
 
-    NOTE: Files are saved using SHA1-based filenames to prevent collisions.
+    Files are saved using SHA1-based filenames to prevent collisions.
     """
-    # Convert split DataFrame to list of dict records for faster iteration
+    # Converting split DataFrame to list of dict records for faster iteration
     rows = df_split.to_dict(orient="records")
 
-    # Iterate through every row with progress bar
+    # Iterating through every row with progress bar
     for row in tqdm(rows, desc=f"Processing {split_name} [{VARIANT}]"):
         # Source raw image path
         src = Path(row["orig_path"])
@@ -782,16 +741,16 @@ def resize_and_copy(df_split: pd.DataFrame, split_name: str):
             # Fix EXIF orientation issues
             img = ImageOps.exif_transpose(img)
 
-            # Convert to RGB before crop/resize (ensures consistent 3 channels)
+            # Converting to RGB before crop/resize (ensures consistent 3 channels)
             img = img.convert("RGB")
 
-            # Tight crop to remove background
+            # Tight cropping to remove background
             img = tight_crop_to_brain(img)
 
-            # Resize to model input size using chosen resampler
+            # Resizing to model input size using chosen resampler
             img = img.resize(IMG_SIZE, resample=RESAMPLE)
 
-            # Save processed image
+            # Saving processed image
             img.save(dst)
         except Exception as e:
             # Failure is logged, but pipeline continues (robust batch processing)
@@ -800,14 +759,15 @@ def resize_and_copy(df_split: pd.DataFrame, split_name: str):
 
 
 def save_csv_splits(df_train, df_val, df_test):
+    
     """
-    Build CSVs that map to the *processed* (cropped) paths.
+    Building CSVs that map to the processed (cropped) paths.
 
     Each CSV has columns:
       - image_path : path to cropped 224x224 RGB image
       - class      : tumour class label
     """
-    # Ensure data/splits/tightcrop exists
+    # Ensuring data/splits/tightcrop exists
     SPLITS_ROOT.mkdir(parents=True, exist_ok=True)
 
     # Helper: map each raw orig_path to the corresponding processed output path
@@ -819,12 +779,12 @@ def save_csv_splits(df_train, df_val, df_test):
             processed_paths.append(str(PROCESSED_ROOT / split_name / cls / out_name))
         return pd.DataFrame({"image_path": processed_paths, "class": df["class"].values})
 
-    # Build the three CSVs
+    # Building the three CSVs
     train_csv = map_to_processed(df_train, "train")
     val_csv   = map_to_processed(df_val, "val")
     test_csv  = map_to_processed(df_test, "test")
 
-    # Write them to disk
+    # Writing them to disk
     train_csv.to_csv(SPLITS_ROOT / "train.csv", index=False)
     val_csv.to_csv(SPLITS_ROOT / "val.csv", index=False)
     test_csv.to_csv(SPLITS_ROOT / "test.csv", index=False)
@@ -833,13 +793,14 @@ def save_csv_splits(df_train, df_val, df_test):
 
 
 def save_summary(df_train, df_val, df_test):
+    
     """
-    Summarise class counts per split.
+    Summarising class counts per split.
 
     Output:
       - results/dataset_summary.csv
     """
-    # Ensure results/ exists
+    # Ensuring results/ exists
     SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # Helper: class counts for one split
@@ -849,7 +810,7 @@ def save_summary(df_train, df_val, df_test):
         c.insert(0, "split", split_name)
         return c
 
-    # Concatenate train + val + test counts into a single summary table
+    # Concatenating train, val and test counts into a single summary table
     summary_df = pd.concat(
         [counts(df_train, "train"), counts(df_val, "val"), counts(df_test, "test")],
         axis=0,
@@ -861,30 +822,28 @@ def save_summary(df_train, df_val, df_test):
     print("Saved dataset summary to results/dataset_summary.csv")
     print(summary_df)
 
-
-# -------------------------------------------------------------------
 # MAIN ORCHESTRATION
-# -------------------------------------------------------------------
 
 def main():
+    
     """
-    Orchestrate the entire dataset preparation pipeline:
+    entire dataset preparation pipeline:
 
-      1. Collect raw images from Kaggle folders
-      2. Save raw class counts per Kaggle split
-      3. Deduplicate based on SHA1 with leakage-safe policy (prefer keep Testing on cross-split dups)
-      4. Analyse raw images (geometry + intensity + quality flags)
-      5. Save analysis CSVs
-      6. Create Kaggle-aligned splits:
+      1. Collecting raw images from Kaggle folders
+      2. Saving raw class counts per Kaggle split
+      3. Deduplicating based on SHA1 with leakage-safe policy (prefer keep Testing on cross-split dups)
+      4. Analyzing raw images (geometry + intensity + quality flags)
+      5. Saving analysis CSVs
+      6. Creating Kaggle-aligned splits:
            - Train/Val from Kaggle Training (stratified)
            - Test from Kaggle Testing (held-out)
-      7. Write cropped 224x224 RGB images into data/processed/tightcrop/
-      8. Save train/val/test CSVs and overall summary table
+      7. Writing cropped 224x224 RGB images into data/processed/tightcrop/
+      8. Saving train/val/test CSVs and overall summary table
     """
-    # Banner print for run logs
+    # print for run logs
     print(f"Running dataset preparation for VARIANT = '{VARIANT}' (cropped-only pipeline)")
 
-    # Step 1: collect raw image paths
+    # Step 1: collecting raw image paths
     df_raw = collect_images()
 
     # Step 2: raw class counts per Kaggle split
@@ -894,26 +853,26 @@ def main():
     df_dedup, dups_df = drop_duplicates_leakage_safe(df_raw)
     save_duplicate_summary(dups_df)
 
-    # Step 4: analyse raw images
+    # Step 4: analysing raw images
     stats_df = analyze_raw_images(df_dedup)
 
-    # Step 5: save analysis artefacts
+    # Step 5: saving analysis artefacts
     save_raw_analysis(stats_df)
 
-    # Step 6: Kaggle-aligned splits (paper/evaluation correct)
+    # Step 6: splits (paper/evaluation correct)
     df_train, df_val, df_test = make_splits_kaggle_aligned(df_dedup)
 
-    # Step 7: prepare dirs + write processed images
+    # Step 7: preparing dirs and writing processed images
     prepare_processed_dirs()
     resize_and_copy(df_train, "train")
     resize_and_copy(df_val, "val")
     resize_and_copy(df_test, "test")
 
-    # Step 8: save split CSVs + summary
+    # Step 8: saving split CSVs and summary
     save_csv_splits(df_train, df_val, df_test)
     save_summary(df_train, df_val, df_test)
 
-    # Finished banner
+    # Finished
     print("Dataset preparation and audit completed (cropped 224x224 images only).")
 
 
