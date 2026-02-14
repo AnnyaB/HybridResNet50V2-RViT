@@ -276,9 +276,12 @@ This repository stores trained model checkpoints (`best_model.pt`) using **Git L
 If you download the repo as a ZIP, the `.pt` files may not download correctly and the demo app can fail with `FileNotFoundError`.
 
 # Run the Demo Web App (macOS / Linux / Windows)
- **Required: Git LFS** (the model checkpoints `*.pt` are stored using Git LFS).  
+
+ ## **Required: Git LFS** (the model checkpoints `*.pt` are stored using Git LFS).  
  **Do NOT use "Download ZIP"** from GitHub — ZIP downloads usually contain **LFS pointer files** (~134 bytes), not the real checkpoints, and the app will fail to load models.
 ---
+## Requires Python 3.12.x (recommended: 3.12.2+) 
+
 ## macOS
 ### 1) Install + enable Git LFS (one-time)
 ```bash
@@ -350,6 +353,9 @@ python app.py
 **Open:** http://127.0.0.1:5000
 ---
 ## Windows (PowerShell)
+
+## Install Git for Windows (then Git LFS, then git lfs install)
+
 ### 1) Install Git LFS (one-time)
 Install Git LFS using ONE of these:
 **Option A (Winget)**
@@ -404,10 +410,9 @@ After the steps above, the model checkpoint files should exist in each model fol
 
 ## Dependencies
 
-> Install using the repo’s provided `requirements.txt` (root) and `webapp/requirements.txt` (webapp).  
-> If running training/preprocessing in a clean environment, ensure **pandas** and **scikit-learn** are installed (they are imported by the training code).
+> Demo web app: install only `webapp/requirements.txt`
 
-
+>  Training / preprocessing: use the root requirements `requirements.txt` (or a separate environment)
 
 
 
