@@ -1,28 +1,8 @@
+# THIS IS THE TRAINING FILE FOR HYBRID A WITH PFB-GSTE VARIANT A
 
+# Libraries I needed
 
-#   Train,  validate and test the HybridResNet50V2_RViT model (PFDA-GSTEA style),
-#   then save the best checkpoint (by val macro-F1) plus plots and metrics.
-#
-# Key ideas in this script:
-#   - i trained using train.csv, validate using val.csv, and final test using test.csv.
-#   - did early stopping based on validation macro-F1 (not just accuracy).
-#   - did transfer learning: CNN starts pretrained, and we can freeze it for warmup epochs.
-#   - used differential learning rates: smaller LR for CNN, bigger LR for the new transformer/fusion parts.
-#   - saved training curves, confusion matrix, and a metrics.json report.
-#
-# Result (what we get after running):
-#   In out_dir/ you will typically see:
-#     - best_model.pt           (best checkpoint based on val macro-F1)
-#     - history.csv             (epoch-by-epoch loss/acc/f1/time)
-#     - loss_curves.png         (train vs val loss curve)
-#     - acc_curves.png          (train vs val accuracy curve)
-#     - confusion_matrix.png    (test confusion matrix)
-#     - metrics.json            (final test metrics + extras like MCC/Kappa/specificity)
-#
-# How to run (eg demo):
-#   python scripts/train.py --csv_dir data/splits/tightcrop --out_dir results/run_hybrid
-
-import sys  # i need to edit sys.path so imports work when running as a script
+import sys  # needed to edit sys.path so imports work when running as a script
 from pathlib import Path  # convenient path handling
 
 # Finding project root (two levels above this file: .../project/scripts/train.py -> .../project/)
@@ -202,7 +182,7 @@ def plot_training(history, out_path):
 def plot_accuracy(history, out_path):
     
     """
-    Plot train vs val accuracy curve across epochs and save to out_path.
+    Plotting train vs val accuracy curve across epochs and save to out_path.
     """
     epochs = list(range(1, len(history["train_acc"]) + 1))
 
@@ -220,7 +200,7 @@ def plot_accuracy(history, out_path):
 def plot_confusion(cm, class_names, out_path):
     
     """
-    Plot and save a confusion matrix heatmap (for test set).
+    Plotting and saving a confusion matrix heatmap (for test set).
     """
     plt.figure()
     plt.imshow(cm, interpolation="nearest")  # show matrix as an image
@@ -254,7 +234,7 @@ def plot_confusion(cm, class_names, out_path):
 def build_param_groups(model, cnn_lr, vit_lr, weight_decay):
     
     """
-    Build optimizer parameter groups:
+    Building optimizer parameter groups:
       - CNN params get cnn_lr
       - everything else gets vit_lr
       - biases and normalization params get NO weight decay (weight_decay=0)
@@ -295,7 +275,7 @@ def build_param_groups(model, cnn_lr, vit_lr, weight_decay):
         else:
             (cnn_decay if target_is_cnn else rest_decay).append(p)
 
-    # Build param group dicts for AdamW
+    # Building param group dicts for AdamW
     groups = []
     if cnn_decay:
         groups.append({"params": cnn_decay, "lr": cnn_lr, "weight_decay": weight_decay})
@@ -319,6 +299,7 @@ def set_requires_grad(module, flag: bool):
 
 
 def main():
+    
     # argparse lets me run this script with different settings from the command line
     import argparse
     ap = argparse.ArgumentParser()
@@ -479,9 +460,9 @@ def main():
 
     start_train = time.time()  # start total timer
 
-    # =========================
+    
     # Main training loop
-    # =========================
+
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()  # timer for this epoch
 
@@ -513,7 +494,7 @@ def main():
         # Running totals for training stats this epoch
         total, correct, loss_sum = 0, 0, 0.0
 
-        # Iterate over mini-batches
+        # Iterating over mini-batches
         for x, y, _ in train_loader:
             # Move batch to device
             x = x.to(device, non_blocking=True)
@@ -539,15 +520,15 @@ def main():
                     max_norm=float(args.grad_clip)
                 )
 
-            # Optimizer step + scaler update (AMP-safe)
+            # Optimizer step and scaler update (AMP-safe)
             scaler.step(optimizer)
             scaler.update()
 
-            # Compute accuracy for this batch (detach to avoid graph)
+            # Computing accuracy for this batch (detach to avoid graph)
             prob = torch.softmax(logits.detach(), dim=1)
             pred = prob.argmax(dim=1)
 
-            # Update epoch totals
+            # Updating epoch totals
             total += y.size(0)
             correct += (pred == y).sum().item()
             loss_sum += float(loss.item()) * y.size(0)
@@ -562,10 +543,10 @@ def main():
         val_acc  = val_stats["acc"]
         val_f1   = val_stats["macro_f1"]
 
-        # Step the LR scheduler after the epoch
+        # Stepping the LR scheduler after the epoch
         scheduler.step()
 
-        # Save history for plots/CSV
+        # Saving history for plots/CSV
         history["train_loss"].append(float(train_loss))
         history["val_loss"].append(float(val_loss))
         history["train_acc"].append(float(train_acc))
@@ -573,23 +554,23 @@ def main():
         history["val_macro_f1"].append(float(val_f1))
         history["epoch_time_sec"].append(float(time.time() - t0))
 
-        # Print quick epoch summary
+        # Printing quick epoch summary
         print(
             f"Epoch {epoch:03d} | "
             f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} | "
             f"val_loss={val_loss:.4f} val_acc={val_acc:.4f} val_macroF1={val_f1:.4f}"
         )
 
-        # =========================
+        
         # Early stopping logic (macro-F1)
-        # =========================
+        
         if val_f1 > best_f1:
-            # Improvement! Save best checkpoint
+            # Improvement! Save best checkpoint, :)
             best_f1 = val_f1
             best_epoch = epoch
             bad_epochs = 0
 
-            # Build checkpoint dict (weights + metadata so inference knows classes/normalization/config)
+            # Build checkpoint dict (weights and metadata so inference knows classes/normalization/config)
             ckpt = {
                 "model_state": model.state_dict(),   # the actual weights
                 "class_names": class_names,          # label order
@@ -630,21 +611,21 @@ def main():
     total_train_time = time.time() - start_train
     print(f"Total training time (sec): {total_train_time:.1f}")
 
-    # =========================
+   
     # Save history as CSV
-    # =========================
+ 
     import pandas as pd  # imported here so pandas is only required when saving history
     pd.DataFrame(history).to_csv(out_dir / "history.csv", index=False)
 
-    # =========================
+
     # Save plots
-    # =========================
+
     plot_training(history, out_dir / "loss_curves.png")
     plot_accuracy(history, out_dir / "acc_curves.png")
 
-    # =========================
+
     # Test evaluation using best checkpoint
-    # =========================
+
     best = torch.load(out_dir / "best_model.pt", map_location=device)
     model.load_state_dict(best["model_state"])
 
@@ -662,7 +643,7 @@ def main():
     mcc = matthews_corrcoef(y_true, y_pred)
     spec_macro, spec_per_class = specificity_macro(cm)
 
-    # Build a clean metrics dict to save as JSON
+    # Building a clean metrics dict to save as JSON
     metrics = {
         "test_loss": test_stats["loss"],
         "test_acc": test_stats["acc"],
@@ -685,7 +666,7 @@ def main():
     with open(out_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    # Print summary paths and best epoch
+    # Printing summary paths and best epoch
     print("Saved outputs to:", str(out_dir))
     print("Best epoch:", best_epoch, "Best val macroF1:", best_f1)
 

@@ -1,31 +1,12 @@
-# ==================================================================================================
-# scripts/predict_xai_with_pfd_gste.py   (XAI B)
-# ==================================================================================================
-# This script is an explain one image runner for the full Hybrid B model (PFD and GSTE ON).
-#
-# What I implemented myself in this script:
-# - A strict XAI execution path that always runs the full model mode so mask and attention exist.
-# - Grad-CAM++ built from the PFD-gated CNN activation map and its gradients.
-# - Attention rollout that chains attention across transformer blocks to get token importance.
-# - Simple overlay utilities that save explanation images (CAM and attention) to disk.
-# - MC-dropout inference wrapper usage to report mean prediction and predictive variance.
-#
-# What I import from libraries:
-# - sys, pathlib.Path: clean path and import handling so the script runs from anywhere.
-# - numpy: image array conversion, sqrt/argmax helpers, and lightweight numeric ops.
-# - torch and torch.nn.functional: tensors, autograd, interpolation, and activations.
-# - matplotlib: saving overlays to files (Agg backend so it works without a display).
-# - PIL.Image: reading/resizing input images.
-# - HybridResNet50V2_RViT: the model class that returns (logits, xai_payload).
-# ==================================================================================================
+# THIS IS THE FILE FOR XAI FOR THE HYBRID MODEL B WITH PFD-GSTE VARIANT B
 
+# Libraries I needed
+import sys 
+from pathlib import Path  
 
-import sys  # I use sys.path edits so local imports work no matter my current working directory.
-from pathlib import Path  # I use Path for cross-platform filesystem paths and clean joins.
+import numpy as np  
 
-import numpy as np  # I use NumPy for PIL->array conversion and small numeric utilities.
-
-import torch  # I use torch for tensors, autograd, device placement, and model execution.
+import torch  
 import torch.nn.functional as F  # I use F for relu/interpolate/pooling without creating new modules.
 
 import matplotlib  # use matplotlib to write overlay images to disk.
@@ -36,8 +17,8 @@ import matplotlib.pyplot as plt  # use pyplot to draw and save overlay figures.
 from PIL import Image  # use PIL to load the input image file reliably.
 
 
-# I define ROOT as the folder containing this script file.
-# That gives me a stable “project-relative” anchor for imports and output paths.
+# defining ROOT as the folder containing this script file.
+# That gives me a stable project-relative anchor for imports and output paths.
 ROOT = Path(__file__).resolve().parent  # resolve() follows symlinks; parent picks the containing folder.
 
 # If my project root isn’t importable yet, I push it onto sys.path.
@@ -50,6 +31,7 @@ from models.hybrid_model import HybridResNet50V2_RViT  # this model returns logi
 
 
 def preprocess_pil(img, mean, std):
+    
     # --- Goal: turn a PIL image into a normalized torch tensor shaped (1,3,224,224). ---
 
     img = img.convert("RGB")  # I force 3 channels so the model always sees consistent input shape.
@@ -73,7 +55,8 @@ def preprocess_pil(img, mean, std):
 
 
 def normalize_map(h):
-    # --- Goal: map any heatmap-like tensor to [0,1] so overlays behave consistently. ---
+
+    # mapping any heatmap-like tensor to [0,1] so overlays behave consistently.
 
     h = h - h.min()  # shift so smallest value becomes 0.
     h = h / (h.max() + 1e-8)  # scale so largest value becomes 1; eps avoids divide-by-zero.
@@ -81,7 +64,8 @@ def normalize_map(h):
 
 
 def gradcam_pp_from_activations(A, grads):
-    # --- Goal: compute Grad-CAM++ heatmap from an activation map A and its gradients grads. ---
+
+    # computing Grad-CAM++ heatmap from an activation map A and its gradients grads. 
 
     if A is None:  # if A is missing, the forward hook didn’t capture what I expected.
         raise RuntimeError("Activation A is None (hook failed).")
@@ -116,7 +100,8 @@ def gradcam_pp_from_activations(A, grads):
 
 
 def attention_rollout(attn_list, side=None, eps=1e-6):
-    # --- Goal: turn a list of attention matrices into a single token-importance map. ---
+
+    # Turning a list of attention matrices into a single token-importance map. ---
 
     # The model returns attention per block only when return_xai=True.
     if not attn_list:
@@ -174,7 +159,8 @@ def attention_rollout(attn_list, side=None, eps=1e-6):
 
 
 def overlay_and_save(img_rgb, heat, out_path, title):
-    # --- Goal: save an overlay visualization (base image + heatmap) to disk. ---
+
+    # Saving an overlay visualization (base image and  heatmap) to disk.
 
     plt.figure(figsize=(5, 5))  # create a new figure so previous plots don’t contaminate this one.
     plt.imshow(img_rgb)  # draw the original image first (what we are explaining).
@@ -187,7 +173,7 @@ def overlay_and_save(img_rgb, heat, out_path, title):
 
 
 def main():
-    # I keep argparse inside main so importing this file doesn’t run CLI setup automatically.
+    # keep argparse inside main so importing this file doesn’t run CLI setup automatically.
     import argparse  # local import keeps script import-time light.
 
     ap = argparse.ArgumentParser()  # create CLI parser.
@@ -216,11 +202,11 @@ def main():
 
     cfg = ckpt.get("model_cfg", {})  # optional model config dict saved alongside weights.
 
-    # ----------------------------------------------------------------------------------------------
-    # FORCE FULL MODE: PFD + GSTE ON (XAI B)
-    # ----------------------------------------------------------------------------------------------
+
+    # PFD-GSTE VARIANT B 
+
     # The point of this script is to explain using:
-    # - PFD mask (for ROI guidance + visualization)
+    # - PFD mask (for ROI guidance and visualization)
     # - GSTE dynamic tokens (so attention map aligns to the actually-used token grid)
     model = HybridResNet50V2_RViT(
         num_classes=cfg.get("num_classes", len(class_names)),  # output logits width.
@@ -248,9 +234,9 @@ def main():
     model.load_state_dict(state)  # load trained parameters into model.
     model.eval()  # put model in eval mode (deterministic unless we selectively re-enable dropout).
 
-    # ----------------------------------------------------------------------------------------------
+  
     # Load and preprocess image
-    # ----------------------------------------------------------------------------------------------
+
     img = Image.open(args.image)  # open image file.
     img = img.convert("RGB")  # guarantee 3 channels.
     img = img.resize((224, 224))  # enforce expected size for backbone and patch embed.
@@ -258,12 +244,13 @@ def main():
     x = preprocess_pil(img, mean, std)  # (1,3,224,224) normalized tensor.
     x = x.to(device)  # move input to same device as model.
 
-    # ----------------------------------------------------------------------------------------------
+   
     # Hooks for Grad-CAM++: capture the PFD output feature map and its gradients
-    # ----------------------------------------------------------------------------------------------
+ 
     hook_cache = {}  # I store activations here so the hook can pass data back to the main code.
 
     def _pfd_hook(module, inputs, output):
+        
         # This hook runs during forward() on the PFD module.
 
         # PFD forward returns (feat_path, mask). I verify structure so failures aren’t silent.
@@ -309,10 +296,10 @@ def main():
     finally:
         h.remove()  # always remove hook even if something throws; prevents hook stacking across runs.
 
-    # ----------------------------------------------------------------------------------------------
+ 
     # Build Grad-CAM++ heatmap (image-level)
-    # ----------------------------------------------------------------------------------------------
-    cam_small = gradcam_pp_from_activations(A, A.grad)  # CAM++ at feature map resolution (e.g., 7x7).
+ 
+    cam_small = gradcam_pp_from_activations(A, A.grad)  # CAM++ at feature map resolution (for instance., 7x7).
 
     cam = F.interpolate(  # resize CAM to 224x224 so it overlays directly on the input image.
         cam_small.unsqueeze(0).unsqueeze(0),  # (H,W) -> (1,1,H,W) for interpolate.
@@ -323,9 +310,9 @@ def main():
 
     cam = cam.detach().cpu().numpy()  # convert to NumPy for matplotlib plotting.
 
-    # ----------------------------------------------------------------------------------------------
+
     # Build Attention Rollout heatmap (image-level)
-    # ----------------------------------------------------------------------------------------------
+
     attn_list = xai.get("attn") or xai.get("attn_list")  # support either key name if model changes.
     if attn_list is None:
         raise KeyError("XAI dict missing attention list: expected 'attn' or 'attn_list'.")
@@ -343,11 +330,10 @@ def main():
 
     attn_img = attn_img.detach().cpu().numpy()  # convert to NumPy for plotting.
 
-    # ----------------------------------------------------------------------------------------------
-    # MC Dropout uncertainty (mean + variance)
-    # ----------------------------------------------------------------------------------------------
+    # MC Dropout uncertainty (mean and variance)
+
     with torch.no_grad():  # no gradients needed for MC-dropout reporting.
-        mu, var = model.mc_dropout_predict(x, mc_samples=args.mc_samples)  # mean prob + variance.
+        mu, var = model.mc_dropout_predict(x, mc_samples=args.mc_samples)  # mean prob and variance.
 
         mu = mu.squeeze(0).cpu().numpy()  # (1,C) -> (C,)
         var = var.squeeze(0).cpu().numpy()  # (1,C) -> (C,)
@@ -356,9 +342,9 @@ def main():
     mu_conf = float(mu[mu_pred])  # mean confidence for that class.
     mu_var = float(var[mu_pred])  # predictive variance for that class.
 
-    # ----------------------------------------------------------------------------------------------
+
     # Save overlays
-    # ----------------------------------------------------------------------------------------------
+
     img_rgb = np.array(img)  # (H,W,3) uint8 image for matplotlib background.
 
     overlay_and_save(  # save Grad-CAM++ overlay.
@@ -375,9 +361,9 @@ def main():
         "Attention Rollout",  # title string.
     )
 
-    # ----------------------------------------------------------------------------------------------
+   
     # Print summary (console)
-    # ----------------------------------------------------------------------------------------------
+
     print("Prediction (single pass):")  # header for single forward pass.
     print(f"  class = {class_names[pred_idx]} (idx={pred_idx})")  # predicted class label and index.
     print(f"  confidence = {conf:.4f}")  # predicted confidence.

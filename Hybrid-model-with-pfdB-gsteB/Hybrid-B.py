@@ -1,35 +1,14 @@
-# ==================================================================================================
-# models/hybrid_model.py  (HYBRID B)
-# ==================================================================================================
-# In this file, I’m building a CNN-Transformer hybrid classifier with optional mask-guided focusing.
-#
-# Implemented from scratch by me (custom logic, not a library feature):
-# - A clean wrapper around a timm ResNet50V2 backbone that always returns the final feature map.
-# - PFD: a learned 1x1 conv and sigmoid mask that gates CNN features (pathology-focused gating).
-# - ViT-style patch tokenization and rotation handling (rotate image -> patchify -> embed -> average).
-# - FlexibleMHSA: attention that still works even when embed_dim isn’t divisible by num_heads.
-# - RViTBlock: attention, depthwise conv (local mixing), MLP, with pre-LN and residuals.
-# - GSTE: mask-guided token weighting and optional dynamic grid shrink via weighted pooling.
-# - Fusion head: merges CNN descriptor and Transformer descriptor and predicts class logits.
-# - XAI-friendly outputs: attention maps, upsampled mask and cached CNN features for CAM hooks.
-#
-# Libraries I import:
-# - math: tiny numeric helpers (ceil, sqrt).
-# - torch: tensors, autograd, device ops.
-# - torch.nn: layer modules (Conv2d, Linear, LayerNorm, Dropout, etc.).
-# - torch.nn.functional: functional ops (interpolate, pooling, activations).
-# - timm: model factory for pretrained ResNet50V2 (imported inside the backbone wrapper).
-#
-# ==================================================================================================
+# THIS IS THE FILE FOR THE HYBRID MODEL WITH PFD-GSTE VARIANT B
+
+# Libraries I needed
 
 import math  # I use this for ceil/sqrt when handling head dims and token-grid inference.
-import torch  # I use torch as the tensor and autograd engine for everything in this model.
-import torch.nn as nn  # I use nn.Module and layer primitives to build trainable blocks.
-import torch.nn.functional as F  # I use functional ops for pooling/interpolation/activations.
+import torch  # torch as the tensor and autograd engine for everything in this model.
+import torch.nn as nn  # nn.Module and layer primitives to build trainable blocks.
+import torch.nn.functional as F  # functional ops for pooling/interpolation/activations.
 
-# --------------------------------------------------------------------------------------------------
+
 # CNN BACKBONE: pretrained ResNet50V2 via timm
-# --------------------------------------------------------------------------------------------------
 class ResNet50V2TimmBackbone(nn.Module):
     """
     I wrap timm’s ResNetV2 so the rest of the model always gets a consistent output:
@@ -38,33 +17,34 @@ class ResNet50V2TimmBackbone(nn.Module):
     """
 
     def __init__(self, model_name="resnetv2_50x1_bitm", pretrained=True):
+        
         super().__init__()  # I initialize nn.Module so parameters register properly.
 
-        # I import timm here (inside the class) so importing this file doesn’t hard-crash
+        # importing timm here (inside the class) so importing this file doesn’t hard-crash
         # in environments where timm isn’t installed.
         try:
-            import timm  # I try to import timm, which is required for the backbone.
+            import timm  # trying to import timm, which is required for the backbone.
         except Exception as e:
-            # I raise a clear, direct error so the failure mode is obvious.
+            # raising a clear, direct error so the failure mode is obvious.
             raise ImportError(
                 "timm is required for pretrained ResNet50V2. Install timm to use this backbone."
             ) from e
 
-        self.model_name = model_name  # I store the backbone name so runs/checkpoints are reproducible.
+        self.model_name = model_name  # storing the backbone name so runs/checkpoints are reproducible.
 
-        # I request feature maps instead of a classification head:
+        # requesting feature maps instead of a classification head:
         # - features_only=True => returns intermediate feature maps as a list
         # - out_indices=(4,)  => only keep the deepest (final) stage output
-        import timm  # I import again after the guarded import so I can call it safely.
+        import timm  # importing again after the guarded import so I can call it safely.
 
-        self.backbone = timm.create_model(  # I ask timm to build the model.
+        self.backbone = timm.create_model(  # asking timm to build the model.
             model_name,  # this selects the exact architecture + weight recipe.
             pretrained=pretrained,  # if True, the backbone starts with pretrained weights.
-            features_only=True,  # I want feature maps, not logits.
-            out_indices=(4,),  # I only keep the final stage feature map.
+            features_only=True,  #  want feature maps, not logits.
+            out_indices=(4,),  # only keeping the final stage feature map.
         )
 
-        # I try to read the output channel count from timm’s feature metadata.
+        # trying to read the output channel count from timm’s feature metadata.
         # This keeps later layers (PFD, projections) correctly sized.
         try:
             self.out_ch = int(self.backbone.feature_info.channels()[-1])  # deepest stage channels
@@ -76,62 +56,64 @@ class ResNet50V2TimmBackbone(nn.Module):
         feats = self.backbone(x)  # the model converts pixels into hierarchical feature maps (list).
         return feats[-1]  # I return the final stage feature map: (B, C, 7, 7) for 224x224.
     
-# --------------------------------------------------------------------------------------------------
-# PFD: learned spatial gating on CNN feature maps
-# --------------------------------------------------------------------------------------------------
+
+# PFD: learned spatial gating on CNN feature maps (VARIANT B)
+
 class PFD(nn.Module):
+    
     """
     PFD (pathology-focused gating):
-    - I predict a 1-channel spatial mask from the CNN feature map using a 1x1 conv.
-    - I pass it through sigmoid so each location is a soft weight in [0, 1].
-    - I multiply feature_map * mask (broadcast over channels) to emphasize ROI locations.
+    - predicting a 1-channel spatial mask from the CNN feature map using a 1x1 conv.
+    - passing it through sigmoid so each location is a soft weight in [0, 1].
+    - multiplying feature_map * mask (broadcast over channels) to emphasize ROI locations.
 
     What the model sees after this:
     - Same feature map shape, but spatial energy is concentrated where the learned mask is high.
     """
 
     def __init__(self, in_ch):
-        super().__init__()  # I register this as a proper trainable module.
+        super().__init__()  # registering this as a proper trainable module.
 
-        self.mask_conv = nn.Conv2d(  # I compress C channels -> 1 mask channel.
+        self.mask_conv = nn.Conv2d(  # compressing C channels -> 1 mask channel.
             in_ch,  # input channels from CNN feature map (e.g., 2048).
             1,  # output channel = 1 (a single spatial mask).
             kernel_size=1,  # 1x1 conv mixes channels per location without changing spatial layout.
             stride=1,  # keep same spatial resolution.
             padding=0,  # no padding needed for 1x1.
-            bias=True,  # I allow a bias term so the mask can shift baseline activation.
+            bias=True,  # allowing a bias term so the mask can shift baseline activation.
         )
 
     def forward(self, feat):
+        
         # feat is the CNN feature map: (B, C, 7, 7) for 224x224 input.
         mask_logits = self.mask_conv(feat)  # raw mask scores per spatial location: (B, 1, 7, 7)
         mask = torch.sigmoid(mask_logits)  # squash to [0, 1] so it acts like a soft gate.
         gated = feat * mask  # broadcast multiply: each (i,j) scales all channels equally.
-        return gated, mask  # I return both: gated features for learning + mask for GSTE/XAI.
+        return gated, mask  # returning both: gated features for learning and mask for GSTE/XAI.
 
-# --------------------------------------------------------------------------------------------------
+
 # PATCH EMBEDDING: turn an image into patch tokens (ViT-style)
-# --------------------------------------------------------------------------------------------------
 class ImagePatchEmbed(nn.Module):
     """
-    I convert an image into a sequence of patch embeddings.
+    converting an image into a sequence of patch embeddings.
     With defaults:
       img_size=224, patch_size=16  => 14x14 patches => 196 tokens.
     So the transformer operates on tokens (patch vectors) instead of raw pixels.
     """
 
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=142):
-        super().__init__()  # I register the module so parameters are tracked.
 
-        self.img_size = img_size  # I store the input size expectation (helps shape reasoning).
-        self.patch_size = patch_size  # I store patch size (defines token grid resolution).
+        super().__init__()  # registering the module so parameters are tracked.
+
+        self.img_size = img_size  # storing the input size expectation (helps shape reasoning).
+        self.patch_size = patch_size  # storing patch size (defines token grid resolution).
 
         self.grid_h = img_size // patch_size  # number of patch rows (224//16 = 14).
         self.grid_w = img_size // patch_size  # number of patch cols (224//16 = 14).
         self.num_patches = self.grid_h * self.grid_w  # total tokens (14*14 = 196).
 
         # This Conv2d is the classic ViT patchify trick:
-        # kernel=stride=patch_size => non-overlapping patches + linear projection to embed_dim.
+        # kernel=stride=patch_size => non-overlapping patches and linear projection to embed_dim.
         self.proj = nn.Conv2d(
             in_chans,  # 3 input channels for RGB.
             embed_dim,  # token embedding dimension (D).
@@ -141,29 +123,31 @@ class ImagePatchEmbed(nn.Module):
         )
 
     def forward(self, x):
+        
         # x is the rotated (or original) image batch: (B, 3, 224, 224) by default.
         x = self.proj(x)  # the model now sees a patch grid: (B, D, 14, 14).
 
-        B, D, H, W = x.shape  # I capture shapes so I can flatten correctly.
+        B, D, H, W = x.shape  # capturing shapes so I can flatten correctly.
 
         # flatten(2): (B, D, H*W) turns the 2D grid into a token list per channel.
         # transpose(1,2): (B, H*W, D) => the standard transformer token layout (B, N, D).
         tokens = x.flatten(2).transpose(1, 2)  # tokens: (B, N, D), where N=H*W.
 
-        return tokens, H, W  # I return tokens plus token-grid size (H,W) for later steps.
-
+        return tokens, H, W  # returning tokens plus token-grid size (H,W) for later steps.
 
 class PositionalAndRotationEmbedding(nn.Module):
+    
     """
-    I add:
+    adding:
       - positional embedding: tells the model where each patch came from in the grid
       - rotation embedding: tells the model which rotation produced this token stream
 
-    If the token grid gets shrunk (GSTE), I interpolate the positional grid so it still matches.
+    If the token grid gets shrunk (GSTE), interpolate the positional grid so it still matches.
     """
 
     def __init__(self, base_h=14, base_w=14, embed_dim=142, n_rot=4):
-        super().__init__()  # I initialize parameters correctly inside nn.Module.
+        
+        super().__init__()  # initializing parameters correctly inside nn.Module.
 
         self.base_h = base_h  # base grid height (usually 14).
         self.base_w = base_w  # base grid width (usually 14).
@@ -172,7 +156,7 @@ class PositionalAndRotationEmbedding(nn.Module):
 
         # One learnable vector per base-grid position: shape (1, base_h*base_w, D).
         self.pos = nn.Parameter(torch.zeros(1, base_h * base_w, embed_dim))
-        nn.init.trunc_normal_(self.pos, std=0.02)  # I initialize like standard ViT practice.
+        nn.init.trunc_normal_(self.pos, std=0.02)  # initializing like standard ViT practice.
 
         # One learnable vector per rotation ID: shape (n_rot, D).
         self.rot = nn.Parameter(torch.zeros(self.n_rot, embed_dim))
@@ -187,7 +171,7 @@ class PositionalAndRotationEmbedding(nn.Module):
             # If grid changed, I reshape pos into an image-like grid so I can interpolate smoothly.
             pos = self.pos.reshape(1, self.base_h, self.base_w, self.embed_dim)  # (1,H,W,D)
             pos = pos.permute(0, 3, 1, 2)  # (1,D,H,W) so interpolate works on spatial dims.
-            pos = F.interpolate(  # I resize the positional grid to (ht, wt).
+            pos = F.interpolate(  # resizing the positional grid to (ht, wt).
                 pos,
                 size=(ht, wt),
                 mode="bilinear",
@@ -196,20 +180,21 @@ class PositionalAndRotationEmbedding(nn.Module):
             pos = pos.permute(0, 2, 3, 1)  # back to (1,H,W,D)
             pos = pos.reshape(1, ht * wt, self.embed_dim)  # flatten back to (1,N,D)
 
-        r = int(rot_idx) % self.n_rot  # I clamp rotation ID into [0..n_rot-1] safely.
+        r = int(rot_idx) % self.n_rot  # clamping rotation ID into [0..n_rot-1] safely.
 
         # The model now sees: content token, position, and rotation identity, all in the same D-dim vector.
         tokens = tokens + pos + self.rot[r].view(1, 1, -1)  # broadcast rot embedding over tokens.
 
-        return tokens  # I return the enriched token sequence.
+        return tokens  # returning the enriched token sequence.
 
-# --------------------------------------------------------------------------------------------------
-# IMPORTANT: flexible MHSA when dim isn't divisible by heads
-# --------------------------------------------------------------------------------------------------
+
+# flexible MHSA when dim isn't divisible by heads
+
 class FlexibleMHSA(nn.Module):
+    
     """
     Standard multi-head attention expects dim % heads == 0.
-    Here I avoid shape errors by rounding head_dim up, then projecting back down afterward.
+    Here I avoided shape errors by rounding head_dim up, then projecting back down afterward.
 
     Mechanically:
       head_dim = ceil(dim / heads)
@@ -218,20 +203,20 @@ class FlexibleMHSA(nn.Module):
     """
 
     def __init__(self, dim, num_heads, attn_dropout=0.1, proj_dropout=0.1):
-        super().__init__()  # I register attention weights as parameters.
+        super().__init__()  # registering attention weights as parameters.
 
         self.dim = dim  # token embedding size D.
         self.num_heads = num_heads  # number of attention heads H.
 
-        head_dim = int(math.ceil(dim / num_heads))  # I round up so each head has enough width.
+        head_dim = int(math.ceil(dim / num_heads))  # rounding up so each head has enough width.
         inner_dim = num_heads * head_dim  # total width used inside attention (may exceed dim).
 
-        self.inner_dim = inner_dim  # I store for reshaping in forward().
-        self.head_dim = head_dim  # I store for scaling and reshaping.
+        self.inner_dim = inner_dim  # storing for reshaping in forward().
+        self.head_dim = head_dim  # storing for scaling and reshaping.
 
-        self.scale = head_dim ** -0.5  # I scale dot-products to keep logits numerically stable.
+        self.scale = head_dim ** -0.5  # scaling dot-products to keep logits numerically stable.
 
-        self.qkv = nn.Linear(  # I compute Q,K,V together for speed.
+        self.qkv = nn.Linear(  # computing Q,K,V together for speed.
             dim,  # input token dim.
             inner_dim * 3,  # concatenated QKV output size.
             bias=True,  # bias improves flexibility in projections.
@@ -242,11 +227,12 @@ class FlexibleMHSA(nn.Module):
         self.proj_drop = nn.Dropout(proj_dropout)  # dropout after projection (regularization).
 
     def forward(self, x, return_attn=False):
+        
         B, N, D = x.shape  # B=batch size, N=tokens, D=embedding dim.
 
         qkv = self.qkv(x)  # the model maps each token into Q,K,V vectors in one shot: (B,N,3*inner).
 
-        # I reshape to separate (Q,K,V) and heads:
+        # reshaping to separate (Q,K,V) and heads:
         # (B, N, 3, H, head_dim) then permute to (3, B, H, N, head_dim).
         qkv = qkv.reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
 
@@ -267,15 +253,16 @@ class FlexibleMHSA(nn.Module):
         out = self.proj(out)  # compress back to original token dim: (B,N,D)
         out = self.proj_drop(out)  # apply dropout after projection.
 
-        if return_attn:  # if I’m doing XAI, I pass attention matrices out for rollout/inspection.
+        if return_attn:  # if I’m doing XAI, pass attention matrices out for rollout/inspection.
             return out, attn
 
-        return out, None  # otherwise I keep signature stable with attn=None.
+        return out, None  # otherwise keeping signature stable with attn=None.
 
-# --------------------------------------------------------------------------------------------------
+
 # RViT BLOCK: MHSA -> depth-wise conv -> MLP (pre-LN and residual)
-# --------------------------------------------------------------------------------------------------
+
 class RViTBlock(nn.Module):
+    
     """
     One RViT block mixes information in three stages:
       1) MHSA: global mixing (any token can attend to any other token).
@@ -289,7 +276,8 @@ class RViTBlock(nn.Module):
     """
 
     def __init__(self, dim, heads, mlp_dim, attn_dropout=0.1, dropout=0.1, ht=14, wt=14):
-        super().__init__()  # I register everything as trainable submodules.
+        
+        super().__init__()  # registering everything as trainable submodules.
 
         self.ht = ht  # expected token-grid height (base case).
         self.wt = wt  # expected token-grid width (base case).
@@ -326,24 +314,25 @@ class RViTBlock(nn.Module):
         )
 
     def forward(self, x, return_attn=False):
+        
         # x is token sequence: (B, N, D).
 
-        # --- Global mixing via attention ---
-        x_norm = self.ln1(x)  # I normalize so attention sees stable token statistics.
+        # Global mixing via attention
+        x_norm = self.ln1(x)  # normalizing so attention sees stable token statistics.
         attn_out, attn = self.attn(x_norm, return_attn=return_attn)  # attention update (and maybe attn map).
         x = x + attn_out  # residual add: keep original token info while adding global interactions.
 
-        # --- Local spatial mixing via depthwise conv ---
-        y = self.ln2(x)  # normalize before reshaping to grid.
+        # Local spatial mixing via depthwise conv
+        y = self.ln2(x)  # normalizing before reshaping to grid.
 
-        B, N, D = y.shape  # capture shapes for reshaping.
-        ht = self.ht  # start with the configured expected height.
-        wt = self.wt  # start with the configured expected width.
+        B, N, D = y.shape  # capturing shapes for reshaping.
+        ht = self.ht  # starting with the configured expected height.
+        wt = self.wt  # starting with the configured expected width.
 
-        if ht * wt != N:  # if GSTE shrink changed token count, I infer a near-square grid.
+        if ht * wt != N:  # if GSTE shrink changed token count, inferring a near-square grid.
             side = int(math.sqrt(N))  # rough square root guess.
-            ht = max(side, 1)  # ensure at least 1.
-            wt = max(N // ht, 1)  # compute width to match N.
+            ht = max(side, 1)  # ensuring at least 1.
+            wt = max(N // ht, 1)  # computing width to match N.
             # (This keeps the conv path usable even when tokens were pooled.)
 
         y2 = y.transpose(1, 2).reshape(B, D, ht, wt)  # tokens -> spatial grid: (B,D,H,W).
@@ -352,21 +341,19 @@ class RViTBlock(nn.Module):
         y2 = self.dw_drop(y2)  # dropout on local-mixed tokens.
         x = x + y2  # residual add: keep attention-mixed tokens and add local neighborhood info.
 
-        # --- Per-token nonlinear transform via MLP ---
-        x_norm2 = self.ln3(x)  # normalize for stable MLP input.
+        # Per-token nonlinear transform via MLP
+        x_norm2 = self.ln3(x)  # normalizing for stable MLP input.
         x = x + self.mlp(x_norm2)  # residual add after MLP transform.
 
         return x, attn  # tokens plus attention matrix (if requested).
 
-
-# --------------------------------------------------------------------------------------------------
 # RViT ENCODER: stack of RViTBlocks
-# --------------------------------------------------------------------------------------------------
+
 class RViTEncoder(nn.Module):
     def __init__(self, dim=142, depth=10, heads=10, mlp_dim=480, attn_dropout=0.1, dropout=0.1, ht=14, wt=14):
-        super().__init__()  # I register the encoder stack as a module.
+        super().__init__()  # registering the encoder stack as a module.
 
-        self.blocks = nn.ModuleList([  # I build a depth-sized list of identical blocks.
+        self.blocks = nn.ModuleList([  # building a depth-sized list of identical blocks.
             RViTBlock(  # each block refines the token representation.
                 dim,  # token dimension.
                 heads,  # attention heads.
@@ -376,34 +363,34 @@ class RViTEncoder(nn.Module):
                 ht=ht,  # expected token grid height.
                 wt=wt,  # expected token grid width.
             )
-            for _ in range(depth)  # repeat for the number of layers.
+            for _ in range(depth)  # repeating for the number of layers.
         ])
 
         self.ln = nn.LayerNorm(dim)  # final LN keeps output well-scaled.
 
     def forward(self, x, return_attn=False):
-        attn_list = []  # I store attention maps per layer only when XAI asks for them.
+        attn_list = []  # storing attention maps per layer only when XAI asks for them.
 
-        for blk in self.blocks:  # walk through the transformer depth.
+        for blk in self.blocks:  # walking through the transformer depth.
             x, attn = blk(x, return_attn=return_attn)  # tokens updated by this layer.
 
-            if return_attn and attn is not None:  # if requested, I keep the attention matrix.
+            if return_attn and attn is not None:  # if requested, keep the attention matrix.
                 attn_list.append(attn)
 
         x = self.ln(x)  # final normalization of tokens.
 
-        return x, attn_list  # return final tokens + list of attention matrices.
+        return x, attn_list  # return final tokens and list of attention matrices.
 
 
-# --------------------------------------------------------------------------------------------------
-# MAIN HYBRID MODEL (HYBRID B): CNN (PFD) and RViT (GSTE) -> fusion -> classifier
-# --------------------------------------------------------------------------------------------------
+
+# HYBRID MODEL B WITH PFD-GSTE VARIANT B: ResNet50V2, PFD AND RViT with flexible MHSA and fusion head
+
 class HybridResNet50V2_RViT(nn.Module):
     def __init__(
         self,
-        num_classes=4,         # I predict 4 classes by default (so logits has width 4).
-        img_size=224,          # I assume images are resized to 224x224.
-        patch_size=16,         # use 16x16 patches (224/16 => 14 tokens per side).
+        num_classes=4,         # predicting 4 classes by default (so logits has width 4).
+        img_size=224,          # assuming images are resized to 224x224.
+        patch_size=16,         # using 16x16 patches (224/16 => 14 tokens per side).
         embed_dim=142,         # token embedding dimension D (intentionally odd to test flexibility).
         depth=10,              # number of transformer blocks.
         heads=10,              # number of attention heads.
@@ -421,64 +408,64 @@ class HybridResNet50V2_RViT(nn.Module):
         gste_std_full=0.30,    # at/above this std, mask is “concentrated” => allow max shrink.
         gste_max_shrink=0.50,  # maximum shrink fraction (0.50 => up to 50% side reduction).
     ):
-        super().__init__()  # I register this model as an nn.Module with trainable parameters.
+        super().__init__()  # registering this model as an nn.Module with trainable parameters.
 
-        self.num_classes = num_classes  # I store class count so other methods can rely on it.
-        self.rotations = rotations  #  store which rotations I will iterate over.
-        self.patch_size = patch_size  # store patch size because token grid depends on it.
-        self.img_size = img_size  # store expected image size for shape logic.
-        self.use_pfd_gste = bool(use_pfd_gste)  # I force the flag into a clean boolean.
+        self.num_classes = num_classes  # storing class count so other methods can rely on it.
+        self.rotations = rotations  #  storing which rotations I will iterate over.
+        self.patch_size = patch_size  # storing patch size because token grid depends on it.
+        self.img_size = img_size  # storing expected image size for shape logic.
+        self.use_pfd_gste = bool(use_pfd_gste)  # forcing the flag into a clean boolean.
 
-        # ----------------------------
+
         # CNN branch: ResNet50V2 feature extractor
-        # ----------------------------
-        self.cnn = ResNet50V2TimmBackbone(  # I build the CNN backbone wrapper.
-            model_name=cnn_name,  # selects which ResNetV2 variant to use.
+
+        self.cnn = ResNet50V2TimmBackbone(  # building the CNN backbone wrapper.
+            model_name=cnn_name,  # selecting which ResNetV2 variant to use.
             pretrained=cnn_pretrained,  # whether to load pretrained weights.
         )
 
-        self.cnn_out_ch = int(self.cnn.out_ch)  # I store CNN output channels (needed downstream).
+        self.cnn_out_ch = int(self.cnn.out_ch)  # storing CNN output channels (needed downstream).
 
-        # ----------------------------
+
         # PFD: learned gating mask on CNN feature map
-        # ----------------------------
-        self.pfd = PFD(in_ch=self.cnn_out_ch)  # I create the mask gate module.
+     
+        self.pfd = PFD(in_ch=self.cnn_out_ch)  # creating the mask gate module.
 
-        # ----------------------------
+
         # CNN descriptor head
-        # ----------------------------
-        self.cnn_pool = nn.AdaptiveAvgPool2d(1)  # I pool (H,W) -> (1,1) per channel.
+
+        self.cnn_pool = nn.AdaptiveAvgPool2d(1)  # pooling (H,W) -> (1,1) per channel.
         self.cnn_drop = nn.Dropout(p=float(fusion_dropout))  # dropout on CNN descriptor for regularization.
         self.cnn_proj = nn.Linear(self.cnn_out_ch, fusion_dim)  # project CNN channels -> fusion width.
         self.cnn_bn = nn.BatchNorm1d(fusion_dim)  # stabilize fused CNN vector distribution.
         # (ReLU happens in forward so it’s explicit when reading the pipeline.)
 
-        # ----------------------------
-        # Transformer branch: patch embed and pos/rot embed + encoder
-        # ----------------------------
+  
+        # Transformer branch: patch embed and pos/rot embed and encoder
+       
         grid = img_size // patch_size  # base tokens per side (224//16 = 14).
-        self.base_grid = int(grid)  # I store base side length for GSTE decisions.
+        self.base_grid = int(grid)  # storing base side length for GSTE decisions.
 
         self.gste_min_side = int(max(1, min(gste_min_side, self.base_grid)))  # clamp to valid range.
         self.gste_std_flat = float(gste_std_flat)  # threshold where mask is too flat to guide shrink.
         self.gste_std_full = float(gste_std_full)  # threshold where mask is fully concentrated.
         self.gste_max_shrink = float(gste_max_shrink)  # maximum side shrink fraction.
 
-        self.patch = ImagePatchEmbed(  # I build the patchify+project layer.
+        self.patch = ImagePatchEmbed(  # building the patchify+project layer.
             img_size=img_size,  # expected input image size.
             patch_size=patch_size,  # patch size.
             in_chans=3,  # RGB input.
             embed_dim=embed_dim,  # token dimension D.
         )
 
-        self.posrot = PositionalAndRotationEmbedding(  # I build position+rotation embedding module.
+        self.posrot = PositionalAndRotationEmbedding(  # building position+rotation embedding module.
             base_h=grid,  # base grid height.
             base_w=grid,  # base grid width.
             embed_dim=embed_dim,  # token dimension.
             n_rot=4,  # rotation IDs (0..3).
         )
 
-        self.encoder = RViTEncoder(  # I build the transformer encoder stack.
+        self.encoder = RViTEncoder(  # building the transformer encoder stack.
             dim=embed_dim,  # token dimension.
             depth=depth,  # number of layers.
             heads=heads,  # attention heads.
@@ -491,52 +478,54 @@ class HybridResNet50V2_RViT(nn.Module):
 
         self.vit_proj = nn.Linear(embed_dim, fusion_dim)  # project transformer pooled vector -> fusion width.
 
-        # ----------------------------
+   
         # Fusion and classifier
-        # ----------------------------
+
         self.fuse_fc = nn.Linear(fusion_dim * 2, fusion_dim)  # merge [cnn_vec, vit_vec] -> fusion_dim.
         self.fuse_drop = nn.Dropout(p=float(fusion_dropout))  # dropout on fused vector.
         self.out = nn.Linear(fusion_dim, num_classes)  # final classifier logits.
 
-        # ----------------------------
         # XAI caches (not parameters; just last-forward memory)
-        # ----------------------------
-        self._last_cnn_feat = None  # I keep the last CNN feature map so Grad-CAM-style tools can hook it.
-        self._last_cnn_mask_img = None  # I keep the last upsampled mask for overlay-style explanations.
+     
+        self._last_cnn_feat = None  # keeping the last CNN feature map so Grad-CAM-style tools can hook it.
+        self._last_cnn_mask_img = None  # keeping the last upsampled mask for overlay-style explanations.
 
     def freeze_cnn_bn(self):
-        # I optionally freeze BN running stats inside the CNN backbone by setting BN2d to eval().
+        
+        # optionally freezing BN running stats inside the CNN backbone by setting BN2d to eval().
         for m in self.cnn.modules():  # walk every submodule in the CNN.
             if isinstance(m, nn.BatchNorm2d):  # find 2D batch norms inside the backbone.
                 m.eval()  # stop updating running mean/var (useful for small batch sizes).
 
     def _mask_to_alpha_grid(self, mask_img, out_side):
+        
         """
         mask_img: (B, 1, H, W) at image scale
         out_side: target token side (e.g., 14 for 14x14)
 
-        I downsample mask to token-grid alpha (B,1,out_side,out_side),
+        downsample mask to token-grid alpha (B,1,out_side,out_side),
         then normalize mean to ~1 so token magnitudes don’t collapse or explode.
         """
-        alpha = F.adaptive_avg_pool2d(  # I pool the dense mask into a coarse token-aligned grid.
+        alpha = F.adaptive_avg_pool2d(  # pooling the dense mask into a coarse token-aligned grid.
             mask_img,  # image-scale mask.
             output_size=(out_side, out_side),  # token grid resolution.
         )
         alpha = alpha / (alpha.mean(dim=(2, 3), keepdim=True) + 1e-6)  # normalize mean alpha per sample.
-        return alpha  # the model uses this alpha as “importance weights” per token cell.
+        return alpha  # the model uses this alpha as importance weights per token cell.
 
     def _choose_dynamic_side(self, alpha_base):
+        
         """
         alpha_base: (B,1,g,g) where g=base_grid
 
-        I decide whether to shrink based on how concentrated the mask is.
+        deciding whether to shrink based on how concentrated the mask is.
         The idea:
           - flat mask => no meaningful ROI => keep full grid
           - peaky mask => ROI exists => shrink and focus compute on ROI
         """
-        with torch.no_grad():  # I don’t need gradients for this decision logic.
+        with torch.no_grad():  # don’t need gradients for this decision logic.
             std = alpha_base.std(dim=(2, 3), keepdim=False)  # std over spatial cells => peakiness.
-            s = float(std.mean().item())  # I use batch mean so every sample uses same side.
+            s = float(std.mean().item())  # using batch mean so every sample uses same side.
 
             if s <= self.gste_std_flat:  # if mask is near-uniform, shrinking would be arbitrary.
                 return self.base_grid  # keep full resolution tokens.
@@ -552,12 +541,12 @@ class HybridResNet50V2_RViT(nn.Module):
             return side  # this is the side length used for dynamic token pooling.
 
     def _gste_dynamic_tokens(self, tokens_base, alpha_base, side):
+        
         """
         tokens_base: (B, g*g, D) where g=base_grid
         alpha_base : (B, 1, g, g) mean-normalized
         side       : chosen side <= g
 
-        What I do:
           1) reshape tokens -> (B,D,g,g)
           2) multiply by alpha (ROI weighting)
           3) if side < g, weighted pooling to (side,side)
@@ -580,21 +569,21 @@ class HybridResNet50V2_RViT(nn.Module):
         return tokens, side, side  # return tokens plus the new grid dimensions.
 
     def forward(self, x, return_xai=False):
+        
         # x is the input image batch: (B,3,224,224) typically.
 
-        # ==========================================================================================
-        # 1) CNN backbone forward
-        # ==========================================================================================
+        
+        # CNN backbone forward
+    
         feat = self.cnn(x)  # the model extracts a deep feature map: (B,C,7,7).
 
-        # ==========================================================================================
-        # 2) PFD gating (optional)
-        # ==========================================================================================
+        # PFD gating (optional)
+        
         if self.use_pfd_gste:  # full model path uses the learned mask.
             feat_path, mask_feat = self.pfd(feat)  # produce gated CNN features and low-res mask.
             feat_for_cnn = feat_path  # CNN descriptor uses gated features so it also focuses on ROI.
 
-            mask_img = F.interpolate(  # I upsample the 7x7 mask to image scale for guidance and overlays.
+            mask_img = F.interpolate(  # upsampling the 7x7 mask to image scale for guidance and overlays.
                 mask_feat,  # (B,1,7,7)
                 size=(x.shape[2], x.shape[3]),  # match original image size (H,W).
                 mode="bilinear",  # smooth upsampling.
@@ -607,27 +596,27 @@ class HybridResNet50V2_RViT(nn.Module):
         self._last_cnn_feat = feat_for_cnn  # cache for CAM hooks / debugging.
         self._last_cnn_mask_img = mask_img  # cache mask overlay for visualization tools.
 
-        # ==========================================================================================
-        # 3) CNN pooled descriptor head
-        # ==========================================================================================
+        
+        # CNN pooled descriptor head
+       
         z_cnn = self.cnn_pool(feat_for_cnn).flatten(1)  # (B,C): global average pooling collapses 7x7.
         z_cnn = self.cnn_drop(z_cnn)  # dropout: prevents relying on a small subset of channels.
         z_cnn = self.cnn_proj(z_cnn)  # (B,fusion_dim): project CNN descriptor into fusion width.
         z_cnn = self.cnn_bn(z_cnn)  # batchnorm: stabilize distribution of CNN descriptor.
         z_cnn = F.relu(z_cnn, inplace=True)  # nonlinearity: model keeps positive-biased features.
 
-        # ==========================================================================================
-        # 4) GSTE: choose a dynamic token grid size (optional)
-        # ==========================================================================================
+        
+        # GSTE: choose a dynamic token grid size (optional)
+        
         if self.use_pfd_gste:  # only decide shrink when guidance exists.
             alpha0 = self._mask_to_alpha_grid(mask_img, self.base_grid)  # (B,1,g,g) guidance grid.
             dyn_side = self._choose_dynamic_side(alpha0)  # choose shrink side based on mask peakiness.
         else:
             dyn_side = self.base_grid  # ablation: keep full token grid.
 
-        # ==========================================================================================
-        # 5) Rotation ViT path: rotate -> patchify -> (optional GSTE) -> add embeddings
-        # ==========================================================================================
+       
+        # Rotation ViT path: rotate -> patchify -> (optional GSTE) -> add embeddings
+       
         token_sets = []  # I’ll store one token sequence per rotation.
 
         for k in self.rotations:  # iterate through rotation IDs.
@@ -650,7 +639,7 @@ class HybridResNet50V2_RViT(nn.Module):
 
                 alpha_base = self._mask_to_alpha_grid(m_r, self.base_grid)  # token-grid alpha weights.
 
-                tokens, ht, wt = self._gste_dynamic_tokens(  # apply weighting + optional shrink.
+                tokens, ht, wt = self._gste_dynamic_tokens(  # apply weighting and optional shrink.
                     tokens_base,  # base tokens.
                     alpha_base,  # weights aligned to tokens.
                     dyn_side,  # target side length.
@@ -663,9 +652,9 @@ class HybridResNet50V2_RViT(nn.Module):
 
         Tavg = torch.stack(token_sets, dim=0).mean(dim=0)  # average across rotations before encoding.
 
-        # ==========================================================================================
-        # 6) Transformer encoder: global+local reasoning over patch tokens
-        # ==========================================================================================
+       
+        # 6) Transformer encoder: global and local reasoning over patch tokens
+        
         Tenc, attn_list = self.encoder(  # encoder refines token relationships layer-by-layer.
             Tavg,  # averaged token set.
             return_attn=return_xai,  # only collect attention maps when XAI is requested.
@@ -675,22 +664,22 @@ class HybridResNet50V2_RViT(nn.Module):
         z_vit = self.vit_proj(z_vit)  # project transformer summary into fusion_dim.
         z_vit = F.relu(z_vit, inplace=True)  # nonlinearity before fusion.
 
-        # ==========================================================================================
-        # 7) Fusion + classifier
-        # ==========================================================================================
+        
+        # 7) Fusion and classifier
+       
         z = torch.cat([z_cnn, z_vit], dim=1)  # concatenate descriptors so classifier sees both branches.
         h = self.fuse_fc(z)  # fuse down to fusion_dim.
         h = F.relu(h, inplace=True)  # nonlinearity on fused representation.
         h = self.fuse_drop(h)  # dropout: regularize final classifier input.
         logits = self.out(h)  # final class scores (B,num_classes).
 
-        # ==========================================================================================
+       
         # 8) XAI payload (optional)
-        # ==========================================================================================
+        
         if return_xai:
-            # - "attn": per-layer attention matrices (lets you do attention rollout / token influence).
-            # - "mask": image-scale learned mask (a soft heatmap you can overlay on input image).
-            # - "gste_side": the chosen token-grid side length (shows whether model shrank tokens).
+            # - attn: per-layer attention matrices (lets you do attention rollout / token influence).
+            # - mask: image-scale learned mask (a soft heatmap you can overlay on input image).
+            # - gste_side: the chosen token-grid side length (shows whether model shrank tokens).
             return logits, {
                 "attn": attn_list,     # list of (B, heads, N, N) per layer.
                 "mask": mask_img,      # (B,1,H,W) soft spatial mask.
@@ -701,8 +690,9 @@ class HybridResNet50V2_RViT(nn.Module):
 
     @torch.no_grad()
     def mc_dropout_predict(self, x, mc_samples=20):
+        
         # Monte Carlo dropout inference:
-        # I intentionally keep dropout stochastic at inference time to estimate uncertainty.
+        # intentionally keep dropout stochastic at inference time to estimate uncertainty.
 
         self.eval()  # set model to eval mode (BN uses running stats; deterministic layers stay stable).
 
@@ -722,16 +712,18 @@ class HybridResNet50V2_RViT(nn.Module):
         mu = probs.mean(dim=0)  # predictive mean probability per class.
         var = probs.var(dim=0, unbiased=False)  # predictive variance per class (uncertainty signal).
 
-        return mu, var  # return mean + variance as the MC-dropout estimate.
+        return mu, var  # return mean and variance as the MC-dropout estimate.
 
 
 class HybridResNet50V2_RViT_Ablation(HybridResNet50V2_RViT):
+    
     """
     Ablation version:
     - I disable PFD and GSTE so the model runs without mask guidance or dynamic token shrinking.
-    - This keeps the rest of the pipeline identical for a fair comparison.
+    - This keeps the rest of the pipeline identical for a fair comparison. 
+    MORE IS SHARED ON THE ABLATION SCRIPT
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs["use_pfd_gste"] = False  # I force ablation mode regardless of caller input.
+        kwargs["use_pfd_gste"] = False  # force ablation mode regardless of caller input.
         super().__init__(*args, **kwargs)  # build the parent with guidance disabled.

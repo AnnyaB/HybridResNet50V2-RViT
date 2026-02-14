@@ -62,14 +62,14 @@ plt.tight_layout()
 
 
 
-# Save figure (paper-quality)
+# Save figure
 plt.savefig(
     "Confusion_Matrix__Without_PFDB-GSTEB.png",
     dpi=300,
     bbox_inches="tight"
 )
 
-# Optional: also save as PDF (recommended for journals)
+# Optional: also save as PDF
 plt.savefig(
     "Confusion_Matrix__Without_PFDB-GSTEB.pdf",
     bbox_inches="tight"

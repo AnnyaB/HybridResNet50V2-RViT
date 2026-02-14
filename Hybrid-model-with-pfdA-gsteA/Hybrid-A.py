@@ -1,17 +1,16 @@
-# Hybrid A takes a 224×224 brain MRI image, turns it into a small 7×7 grid of deep features using ResNet50V2, 
-# learns a soft mask that highlights important regions (PFD-A), converts the 7×7 grid into 49 transformer tokens, 
-# weights those tokens using the mask (GSTEA), runs a transformer encoder (RViT), 
-# then fuses CNN + transformer summaries to output 4 class scores (logits).
+# THIS IS THE FILE FOR THE HYBRID MODEL WITH PFD-GSTE VARIANT A
+
+# Libraries I needed
 
 import math  # I used sqrt and other small math helpers
 import torch  # core tensor library and autograd
 import torch.nn as nn  # PyTorch neural network layers
 import torch.nn.functional as F  # functional ops (relu, interpolate, etc.)
 
-# -------------------------
+
 # CNN backbone wrapper (timm ResNet50V2)
-# -------------------------
-class ResNet50V2TimmBackbone(nn.Module): #nn.Module is the base class for all neural network modules in PyTorch 
+
+class ResNet50V2TimmBackbone(nn.Module):  #nn.Module is the base class for all neural network modules in PyTorch 
     # and inherits its properties and methods.
 
     """
@@ -46,15 +45,15 @@ class ResNet50V2TimmBackbone(nn.Module): #nn.Module is the base class for all ne
         )
 
     def forward(self, x):
+        
         # Forward pass through the backbone.
         # timm returns a list of feature maps, one per selected stage.
         feats = self.backbone(x)
         # I requested only the last stage, so took the last element.
         return feats[-1]
 
-# -------------------------
+
 # PFD-A module: learn a pathology mask and gate CNN features
-# -------------------------
 class PFD(nn.Module):
     
     """
@@ -62,6 +61,7 @@ class PFD(nn.Module):
     Mask is 1-channel and broadcasts across feature channels.
     """
     def __init__(self, in_ch):
+        
         super().__init__()  # init base
 
         # 1x1 conv turns (B, in_ch, H, W) -> (B, 1, H, W)
@@ -81,9 +81,9 @@ class PFD(nn.Module):
         # Returned both: gated features for transformer and mask for GSTE/XAI.
         return gated, mask
 
-# -------------------------
+
 # Tokeniser for FEATURE MAPS (not raw-image patchify)
-# -------------------------
+
 class FeatureTokenEmbed(nn.Module):
     
     """
@@ -141,7 +141,7 @@ class PositionalAndRotationEmbedding(nn.Module):
         if ht == self.base_h and wt == self.base_w:
             pos = self.pos
         else:
-            # Otherwise reshape pos into (1,D,base_h,base_w) so we can interpolate.
+            # Otherwise reshape pos into (1,D,base_h,base_w) so I can interpolate.
             pos = self.pos.reshape(1, self.base_h, self.base_w, self.embed_dim).permute(0, 3, 1, 2)
 
             # Resized to (ht, wt) using bilinear interpolation.
@@ -150,14 +150,15 @@ class PositionalAndRotationEmbedding(nn.Module):
             # Converted back to (1, N, D).
             pos = pos.permute(0, 2, 3, 1).reshape(1, ht * wt, self.embed_dim)
 
-        # Add position + rotation embedding (rotation added to every token).
+        # Add position and rotation embedding (rotation added to every token).
         tokens = tokens + pos + self.rot[rot_idx].view(1, 1, -1)
 
         return tokens  # enriched tokens
 
-# -------------------------
-# MHSA (Multi-Head Self Attention) that survives dim not divisible by heads since it drops remainder dims and Krishnan et al used 142 dim with 10 heads
-# -------------------------
+
+# MHSA (Multi-Head Self Attention) that survives dim not divisible by heads since it drops remainder dims and 
+# Krishnan et al used 142 dim with 10 heads
+
 class FlexibleMHSA(nn.Module):
     
     """
@@ -196,6 +197,7 @@ class FlexibleMHSA(nn.Module):
         self.proj_drop = nn.Dropout(proj_dropout)  # dropout after projection
 
     def forward(self, x, return_attn=False):
+        
         # x is tokens: (B,N,D)
         B, N, D = x.shape
 
@@ -233,10 +235,11 @@ class FlexibleMHSA(nn.Module):
 
         return out, None
 
-# -------------------------
+
 # RViT-style block: MHSA -> DWConv -> MLP (each with pre-LN and residual)
-# -------------------------
+
 class RViTBlock(nn.Module):
+    
     """
     Token block:
       x = x + MHSA(LN(x))
@@ -310,7 +313,7 @@ class RViTEncoder(nn.Module):
     def __init__(self, dim=142, depth=10, heads=10, mlp_dim=480, attn_dropout=0.1, dropout=0.1, ht=14, wt=14):
         super().__init__()  # init base
 
-        # Create depth identical blocks.
+        # Creating depth identical blocks.
         self.blocks = nn.ModuleList([
             RViTBlock(dim, heads, mlp_dim, attn_dropout=attn_dropout, dropout=dropout, ht=ht, wt=wt)
             for _ in range(depth)
@@ -319,7 +322,7 @@ class RViTEncoder(nn.Module):
         self.ln = nn.LayerNorm(dim)  # final normalization
 
     def forward(self, x, return_attn=False):
-        attn_list = []  # stored attention maps for all layers if requested
+        attn_list = []  # storing attention maps for all layers if requested
 
         for blk in self.blocks:
             x, attn = blk(x, return_attn=return_attn)
@@ -330,9 +333,9 @@ class RViTEncoder(nn.Module):
 
         return x, attn_list
 
-# -------------------------
-# Main hybrid PFDA-GSTEA model
-# -------------------------
+
+# HYBRID MODEL A WITH PFD-GSTE VARIANT A
+
 class HybridResNet50V2_RViT(nn.Module):
     def __init__(
         self,
@@ -356,7 +359,7 @@ class HybridResNet50V2_RViT(nn.Module):
         self.rotations = rotations  # which rotations we run over
         self.patch_size = patch_size  # stored (used only in helper, not main PFDA tokenisation)
 
-        # Build the CNN feature extractor.
+        # Building the CNN feature extractor.
         self.cnn = ResNet50V2TimmBackbone(model_name=cnn_name, pretrained=cnn_pretrained)
 
         # ResNetV2 last stage commonly outputs 2048 channels.
@@ -375,7 +378,7 @@ class HybridResNet50V2_RViT(nn.Module):
         # Positional+rotation embeddings sized for a 7x7 token grid.
         self.posrot = PositionalAndRotationEmbedding(base_h=7, base_w=7, embed_dim=embed_dim, n_rot=4)
 
-        # Encoder stack. NOTE: ht/wt here are computed using 7//patch_size,
+        # Encoder stack.  ht/wt here are computed using 7//patch_size,
         # which may become 0; the block has runtime fallback to infer ht/wt from N.
         self.encoder = RViTEncoder(
             dim=embed_dim,
@@ -397,12 +400,14 @@ class HybridResNet50V2_RViT(nn.Module):
         self.out = nn.Linear(fusion_dim, num_classes)
 
     def freeze_cnn_bn(self):
+        
         # Handy finetuning trick: keep BN layers in eval mode so their running stats don't drift.
         for m in self.cnn.modules():
             if isinstance(m, nn.BatchNorm2d):
                 m.eval()
 
     def _gste_alpha_from_mask(self, mask_img):
+        
         # Helper (currently unused in forward): downsample an image-scale mask
         # into patch-scale weights and normalize them.
         P = self.patch_size
@@ -413,20 +418,20 @@ class HybridResNet50V2_RViT(nn.Module):
 
     def forward(self, x, return_xai=False):
         # Forward returns logits by default.
-        # If return_xai=True, also returns a dict with mask + attention maps.
+        # If return_xai=True, also returns a dict with mask and attention maps.
 
-        # -------------------------
+       
         # CNN feature extraction
-        # -------------------------
+     
         feat = self.cnn(x)  # (B,2048,7,7)
 
         # CNN pooled vector: global average pool -> flatten -> linear -> ReLU.
         z_cnn = self.cnn_pool(feat).flatten(1)            # (B,2048)
         z_cnn = F.relu(self.cnn_proj(z_cnn), inplace=True) # (B,fusion_dim)
 
-        # -------------------------
+       
         # PFD-A: mask and gated feature map
-        # -------------------------
+
         feat_path, mask_feat = self.pfd(feat)  # feat_path (B,2048,7,7), mask_feat (B,1,7,7)
 
         # Upsample mask only for visualization / overlay.
@@ -437,9 +442,9 @@ class HybridResNet50V2_RViT(nn.Module):
             align_corners=False,
         )
 
-        # -------------------------
+    
         # Rotate FEATURE MAPS and GSTE-A weighting per rotation
-        # -------------------------
+
         token_sets = []  # we store tokens for each rotation then average them
 
         for rot_idx, k in enumerate(self.rotations):
@@ -450,7 +455,7 @@ class HybridResNet50V2_RViT(nn.Module):
             # Tokenise rotated feature map: (B,2048,7,7) -> (B,49,D)
             tokens, ht, wt = self.patch(f_r)
 
-            # Turn rotated mask into per-token weights: (B,1,7,7) -> (B,49,1)
+            # Turning rotated mask into per-token weights: (B,1,7,7) -> (B,49,1)
             alpha = m_r.flatten(2).transpose(1, 2)
 
             # Normalize so average weight is ~1 (keeps scale stable).
@@ -459,18 +464,18 @@ class HybridResNet50V2_RViT(nn.Module):
             # GSTE-A: static guidance (multiply tokens by weights).
             tokens = tokens * alpha
 
-            # Add positional embedding (depends on ht/wt) and rotation embedding (depends on rot_idx).
+            # Adding positional embedding (depends on ht/wt) and rotation embedding (depends on rot_idx).
             tokens = self.posrot(tokens, ht, wt, rot_idx)
 
-            # Save this rotation's token set.
+            # Saving this rotation's token set.
             token_sets.append(tokens)
 
         # Average tokens over rotations (rotation-invariant-ish representation).
         Tavg = torch.stack(token_sets, dim=0).mean(dim=0)  # (B,49,D)
 
-        # -------------------------
+
         # Transformer encoder
-        # -------------------------
+      
         Tenc, attn_list = self.encoder(Tavg, return_attn=return_xai)
 
         # Pool tokens by mean (no CLS token).
@@ -479,9 +484,9 @@ class HybridResNet50V2_RViT(nn.Module):
         # Project to fusion_dim.
         z_vit = F.relu(self.vit_proj(z_vit), inplace=True)  # (B,fusion_dim)
 
-        # -------------------------
+
         # Fusion and classifier
-        # -------------------------
+   
         z = torch.cat([z_cnn, z_vit], dim=1)       # (B,2*fusion_dim)
         h = F.relu(self.fuse_fc(z), inplace=True)  # (B,fusion_dim)
         h = self.fuse_drop(h)
@@ -495,6 +500,7 @@ class HybridResNet50V2_RViT(nn.Module):
 
     @torch.no_grad()
     def mc_dropout_predict(self, x, mc_samples=20):
+        
         # Monte Carlo Dropout:
         # - Put model in eval mode (so BN is stable),
         # - Turn dropout back ON,
@@ -507,7 +513,7 @@ class HybridResNet50V2_RViT(nn.Module):
             if isinstance(m, (nn.Dropout, nn.Dropout2d)):
                 m.train()
 
-        probs = []  # store probabilities from each stochastic forward pass
+        probs = []  # storing probabilities from each stochastic forward pass
 
         for _ in range(mc_samples):
             logits, _ = self.forward(x, return_xai=False)

@@ -182,7 +182,7 @@ button {
 /* Chart images */
 .chart img {
   width: 100%;                   /* Fill container width */
-  height: 1000px;                /* Fixed height for consistency */
+  height: 300px;                /* Fixed height for consistency */
   object-fit: contain;           /* Ensuring entire plot is visible */
   background: #0b0f14;           /* Dark background behind transparent plots */
   border-radius: 12px;           /* Rounded corners */
