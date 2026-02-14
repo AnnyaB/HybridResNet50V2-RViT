@@ -270,6 +270,33 @@ From the training scripts and preprocessing pipeline, the project uses:
 
 -----
 
+## Getting started (required: Git LFS for checkpoints)
+
+This repository stores trained model checkpoints (`best_model.pt`) using **Git LFS**.  
+If you download the repo as a ZIP, the `.pt` files may not download correctly and the demo app can fail with `FileNotFoundError`.
+
+### 1  Install Git LFS (one-time per machine)
+
+- **macOS (Homebrew):**
+  ```bash
+  brew install git-lfs
+  git lfs install
+
+Windows / Linux:
+Install Git LFS from the official site, then run: git lfs install
+
+### 2 Clone the repository (recommended)
+
+git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
+cd HybridResNet50V2-RViT
+
+### 3 Pull the large checkpoint files
+
+git lfs pull
+
+After this, the model checkpoint files should exist in each model folder (for instance,  Hybrid-model-with-pfdA-gsteA/best_model.pt).
+------
+
 ## Dependencies
 
 > Install using the repo’s provided `requirements.txt` (root) and `webapp/requirements.txt` (webapp).  
