@@ -319,7 +319,7 @@ cd webapp
 pip install -r requirements.txt
 python app.py
 ```
-**Open:** http://127.0.0.1:5000
+
 ---
 ## Linux (Ubuntu/Debian)
 ### 1) Install + enable Git LFS (one-time)
@@ -350,7 +350,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 python app.py
 ```
-**Open:** http://127.0.0.1:5000
+
 ---
 ## Windows (PowerShell)
 
@@ -394,7 +394,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 python app.py
 ```
-**Open:** http://127.0.0.1:5000
+
 
 **If PowerShell blocks activation, run PowerShell as Administrator once and execute:**
 ```powershell
@@ -416,7 +416,7 @@ After the steps above, the model checkpoint files should exist in each model fol
 
 
 
-Then **open**:
+## Then **open**:
 
 http://127.0.0.1:5000
 
