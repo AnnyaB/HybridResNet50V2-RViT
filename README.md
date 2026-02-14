@@ -275,27 +275,132 @@ From the training scripts and preprocessing pipeline, the project uses:
 This repository stores trained model checkpoints (`best_model.pt`) using **Git LFS**.  
 If you download the repo as a ZIP, the `.pt` files may not download correctly and the demo app can fail with `FileNotFoundError`.
 
-### 1  Install Git LFS (one-time per machine)
-
-- **macOS (Homebrew):**
-  ```bash
-  brew install git-lfs
-  git lfs install
-
-Windows / Linux:
-Install Git LFS from the official site, then run: git lfs install
-
-### 2 Clone the repository (recommended)
-
+# Run the Demo Web App (macOS / Linux / Windows)
+ **Required: Git LFS** (the model checkpoints `*.pt` are stored using Git LFS).  
+ **Do NOT use "Download ZIP"** from GitHub — ZIP downloads usually contain **LFS pointer files** (~134 bytes), not the real checkpoints, and the app will fail to load models.
+---
+## macOS
+### 1) Install + enable Git LFS (one-time)
+```bash
+brew install git-lfs
+git lfs install
+```
+### 2) Re-clone correctly (recommended)
+```bash
+cd ~/Downloads
+rm -rf HybridResNet50V2-RViT HybridResNet50V2-RViT-main
 git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
 cd HybridResNet50V2-RViT
-
-### 3 Pull the large checkpoint files
-
 git lfs pull
+```
+### 3) Sanity check (must NOT be ~134B)
+```bash
+ls -lh Hybrid-model-with-pfdA-gsteA/best_model.pt
+head -n 1 Hybrid-model-with-pfdA-gsteA/best_model.pt
+```
+## A real checkpoint will be large (For instance, ~100MB) and head will show binary junk.
+ If head prints version https://git-lfs.github.com/spec/v1, you downloaded an LFS pointer (run git lfs pull again).
+### 4) Run the web app
+**Option A (recommended): virtual environment**
+```bash
+cd webapp
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python app.py
+```
+**Option B (if you insist on your current environment)**
+```bash
+cd webapp
+pip install -r requirements.txt
+python app.py
+```
+**Open:** http://127.0.0.1:5000
+---
+## Linux (Ubuntu/Debian)
+### 1) Install + enable Git LFS (one-time)
+```bash
+sudo apt update
+sudo apt install -y git-lfs
+git lfs install
+```
+### 2) Clone + pull checkpoints
+```bash
+cd ~/Downloads
+rm -rf HybridResNet50V2-RViT HybridResNet50V2-RViT-main
+git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
+cd HybridResNet50V2-RViT
+git lfs pull
+```
+### 3) Sanity check
+```bash
+ls -lh Hybrid-model-with-pfdA-gsteA/best_model.pt
+head -n 1 Hybrid-model-with-pfdA-gsteA/best_model.pt
+```
+### 4) Run the web app (venv recommended)
+```bash
+cd webapp
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python app.py
+```
+**Open:** http://127.0.0.1:5000
+---
+## Windows (PowerShell)
+### 1) Install Git LFS (one-time)
+Install Git LFS using ONE of these:
+**Option A (Winget)**
+```powershell
+winget install --id GitHub.GitLFS -e
+```
+**Option B (Chocolatey)**
+```powershell
+choco install git-lfs -y
+```
+Then enable it:
+```powershell
+git lfs install
+```
+### 2) Clone + pull checkpoints (DON'T use ZIP)
+```powershell
+cd $env:USERPROFILE\Downloads
+Remove-Item -Recurse -Force HybridResNet50V2-RViT, HybridResNet50V2-RViT-main -ErrorAction SilentlyContinue
+git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
+cd HybridResNet50V2-RViT
+git lfs pull
+```
+### 3) Sanity check (must NOT be tiny)
+```powershell
+dir Hybrid-model-with-pfdA-gsteA\best_model.pt
+Get-Content Hybrid-model-with-pfdA-gsteA\best_model.pt -TotalCount 1
+```
+ The file size should be large (e.g., ~100MB).
+ If the first line shows version https://git-lfs.github.com/spec/v1, run git lfs pull again.
+### 4) Run the web app (venv recommended)
+```powershell
+cd webapp
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python app.py
+```
+**Open:** http://127.0.0.1:5000
 
-After this, the model checkpoint files should exist in each model folder (for instance,  Hybrid-model-with-pfdA-gsteA/best_model.pt).
-------
+**If PowerShell blocks activation, run PowerShell as Administrator once and execute:**
+```powershell
+Set-ExecutionPolicy RemoteSigned
+```
+---
+## After this (expected)
+After the steps above, the model checkpoint files should exist in each model folder, for example:
+- `Hybrid-model-with-pfdA-gsteA/best_model.pt`
+- `Hybrid-model-with-pfdB-gsteB/best_model.pt`
+- `Hybrid-model-without-pfdA-gsteA/best_model.pt`
+- `Hybrid-model-without-pfdB-gsteB/best_model.pt`
 
 ## Dependencies
 
@@ -303,31 +408,8 @@ After this, the model checkpoint files should exist in each model folder (for in
 > If running training/preprocessing in a clean environment, ensure **pandas** and **scikit-learn** are installed (they are imported by the training code).
 
 
-Install:
-```bash
-pip install -r requirements.txt
 
 
-```
-
-## Demo App 
-
-Go to **webapp** folder
-
-```bash
-python -m venv .venv
-source .venv/bin/activate          # macOS/Linux
-# .venv\Scripts\activate           # Windows (PowerShell)
-
-pip install --upgrade pip
-pip install -r requirements.txt
-
-``` 
-**Run** app.py 
-
-```bash
-python app.py
-``` 
 
 Then **open**:
 
