@@ -1,7 +1,7 @@
 __pycache__/
 *.h5
 *.pt
-!**/best_model.pt
+!**/best_model*.pt
 *.pth
 *.ipynb_checkpoints/
 
