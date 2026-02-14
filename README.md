@@ -467,7 +467,7 @@ Analysis, 64, 101719. doi:https://doi.org/10.1016/j.media.2020.101719 (Accessed:
 ### Private academic license (All Rights Reserved)
 
 This repository is provided under a **Private Academic / All Rights Reserved** arrangement for **assessment and supervision only**.  
-Access is granted only to **approved viewers**. No part of this repository may be redistributed, copied, or used outside the scope of academic evaluation without explicit permission from the owner.
+Access is granted only to **approved viewers**. No part of this repository may be redistributed, copied, or used outside the scope of academic evaluation without explicit permission from the owner. **DO NOT** make any changes in the repository. 
 
 ### Medical disclaimer
 
