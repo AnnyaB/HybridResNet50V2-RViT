@@ -282,6 +282,8 @@ If you download the repo as a ZIP, the `.pt` files may not download correctly an
 ---
 ## Requires Python 3.12.x (recommended: 3.12.2+) 
 
+## Torch wheels differ by OS/CPU/GPU. If pip fails installing torch/torchvision on your machine, use PyTorch’s official install command for your platform, then pip install -r webapp/requirements.txt --no-deps.
+
 ## macOS
 ### 1) Install + enable Git LFS (one-time)
 ```bash
