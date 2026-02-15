@@ -17,3 +17,7 @@ data/interim/
 
 # Colab/Drive temp
 .tmp.driveupload/
+
+# macOS junk
+.DS_Store
+**/.DS_Store
