@@ -19,7 +19,7 @@ Brain tumour MRI classifiers can appear accurate while relying on non-tumour sho
 ---
 
 This repository contains a brain tumour MRI classification pipeline with:
-- **Offline preprocessing** (leakage-safe SHA1 dedup + tight-crop to 224×224 + Kaggle-aligned splits)
+- **Offline preprocessing** (leakage-safe SHA1 dedup, tight-crop to 224×224, splits)
 - **Four training variants**:
   - Hybrid A (**PFD-A + GSTE-A**)
   - Hybrid B (**PFD-B + GSTE-B**)
