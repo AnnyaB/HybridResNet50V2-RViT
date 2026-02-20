@@ -5,7 +5,7 @@
 **Module:** 6COM2017 – Artificial Intelligence Project  
 
 
-**Project Title:** Pathology-Attentive Hybrid CNN-Transformer for Explainable Brain Tumour MRI Classification
+**Project Title:** Brain Tumour Detection and Classification using Explainable Hybrid CNN–Transformer
 
 **Author:** Riya Basak (SRN: 22089065)  
 **Supervisor:** Dr Kheng Lee Koay
