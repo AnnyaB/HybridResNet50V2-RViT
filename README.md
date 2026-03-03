@@ -145,12 +145,16 @@ The dataset is a combination of multiple sources (figshare, SARTAJ, Br35H). In t
 - RViT-style transformer encoder → pooled token descriptor
 - Fusion: concat(CNN descriptor, ViT descriptor) → classifier (4 classes)
 
+![Hybrid A architecture](docs/images/hybrid-a-architecture.png)
+
 ### Hybrid B (PFD-B and GSTE-B)
 - Same CNN backbone and PFD mask, but:
 - CNN descriptor from **gated** `feat_path`
 - Transformer uses raw-image patch tokens (14×14 = 196), guided by upsampled/pool mask
 - Optional grid shrinking (single side chosen per batch) keeps shapes consistent
 - Same fusion and 4-rotation processing pattern
+
+![Hybrid B architecture](docs/images/hybrid-b-architecture.png)
 
 ---
 
