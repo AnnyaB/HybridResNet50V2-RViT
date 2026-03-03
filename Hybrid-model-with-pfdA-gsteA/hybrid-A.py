@@ -130,7 +130,7 @@ class PositionalAndRotationEmbedding(nn.Module):
 
         # Learnable positional table: (1, base_h*base_w, D)
         self.pos = nn.Parameter(torch.zeros(1, base_h * base_w, embed_dim))
-        nn.init.trunc_normal_(self.pos, std=0.02)  # ViT-style init
+        nn.init.trunc_normal_(self.pos, std=0.02)  # ViT init
 
         # Learnable rotation embedding per rotation index: (n_rot, D)
         self.rot = nn.Parameter(torch.zeros(n_rot, embed_dim))

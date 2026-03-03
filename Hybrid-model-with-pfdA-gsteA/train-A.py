@@ -331,7 +331,7 @@ def main():
 
     # Fine-tuning strategy
     ap.add_argument("--warmup_epochs", type=int, default=5, help="Freeze CNN for first N epochs")
-    ap.add_argument("--freeze_cnn_bn", action="store_true", help="Keep CNN BatchNorm frozen (recommended)")
+    ap.add_argument("--freeze_cnn_bn", action="store_true", help="Keep CNN BatchNorm frozen")
 
     # Model hyperparameters (according to my HybridResNet50V2_RViT constructor)
     ap.add_argument("--cnn_name", type=str, default="resnetv2_50x1_bitm")

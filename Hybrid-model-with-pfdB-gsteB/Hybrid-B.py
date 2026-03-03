@@ -7,7 +7,6 @@ import torch  # torch as the tensor and autograd engine for everything in this m
 import torch.nn as nn  # nn.Module and layer primitives to build trainable blocks.
 import torch.nn.functional as F  # functional ops for pooling/interpolation/activations.
 
-
 # CNN BACKBONE: pretrained ResNet50V2 via timm
 class ResNet50V2TimmBackbone(nn.Module):
     """
@@ -713,7 +712,6 @@ class HybridResNet50V2_RViT(nn.Module):
         var = probs.var(dim=0, unbiased=False)  # predictive variance per class (uncertainty signal).
 
         return mu, var  # return mean and variance as the MC-dropout estimate.
-
 
 class HybridResNet50V2_RViT_Ablation(HybridResNet50V2_RViT):
     
