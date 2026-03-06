@@ -21,3 +21,4 @@ data/interim/
 # macOS junk
 .DS_Store
 **/.DS_Store
+webapp/.venv/
