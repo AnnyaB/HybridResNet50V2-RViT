@@ -387,8 +387,6 @@ cd HybridResNet50V2-RViT
 ### 6) Check that a model checkpoint exists
 dir Hybrid-model-with-pfdA-gsteA\best_model.pt
 
-# If checkpoint files are missing or unexpectedly small, run:
-# git lfs pull
 
 ### 7) Run the demo web app
 cd webapp
