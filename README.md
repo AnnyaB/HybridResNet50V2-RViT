@@ -5,7 +5,7 @@
 **Module:** 6COM2017 – Artificial Intelligence Project  
 
 
-**Project Title:** Brain Tumour Detection and Classification using Explainable Hybrid CNN–Transformer
+**Project Title:** Mitigating Shortcut Learning in Brain Tumour Detection and Classification
 
 **Author:** Riya Basak (SRN: 22089065)  
 **Supervisor:** Dr Kheng Lee Koay
@@ -267,7 +267,7 @@ From the training scripts and preprocessing pipeline, the project uses:
  ------
 
 ## Environment
-- **Python:** 3.12.2  
+- **Python:** 3.12.2  (This is what I used)
 - **Training platform:** Kaggle (GPU: P100)  
 - **Local dev:** macOS (repo preparation and scripts)
 - **Platform:** platform: macOS-26.2-arm64-arm-64bit
@@ -284,9 +284,15 @@ If you download the repo as a ZIP, the `.pt` files may not download correctly an
  ## **Required: Git LFS** (the model checkpoints `*.pt` are stored using Git LFS).  
  **Do NOT use "Download ZIP"** from GitHub — ZIP downloads usually contain **LFS pointer files** (~134 bytes), not the real checkpoints, and the app will fail to load models.
 ---
-## Requires Python 3.12.x (recommended: 3.12.2+) 
 
-## Torch wheels differ by OS/CPU/GPU. If pip fails installing torch/torchvision on your machine, use PyTorch’s official install command for your platform, then pip install -r webapp/requirements.txt --no-deps.
+## Python version
+The demo app was tested on Python 3.12.2 on macOS.  
+On some Windows setups, Python 3.11.x may be more reliable because PyTorch and torchvision compatibility depends on available wheels for the platform.
+
+## PyTorch compatibility
+Torch wheels differ by OS, CPU/GPU, and Python version. If installing torch or torchvision fails, use PyTorch’s official install command for your platform, then install the remaining packages from webapp/requirements.txt.
+
+> If checkpoint files are missing or unexpectedly small after cloning, run `git lfs pull`.
 
 ## macOS
 ### 1) Install + enable Git LFS (one-time)
@@ -294,21 +300,17 @@ If you download the repo as a ZIP, the `.pt` files may not download correctly an
 brew install git-lfs
 git lfs install
 ```
-### 2) Re-clone correctly (recommended)
+### 2) Clone correctly (recommended)
 ```bash
 cd ~/Downloads
-rm -rf HybridResNet50V2-RViT HybridResNet50V2-RViT-main
 git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
 cd HybridResNet50V2-RViT
-git lfs pull
 ```
 ### 3) Sanity check (must NOT be ~134B)
 ```bash
 ls -lh Hybrid-model-with-pfdA-gsteA/best_model.pt
-head -n 1 Hybrid-model-with-pfdA-gsteA/best_model.pt
 ```
-## A real checkpoint will be large (For instance, ~100MB) and head will show binary junk.
- If head prints version https://git-lfs.github.com/spec/v1, you downloaded an LFS pointer (run git lfs pull again).
+
 ### 4) Run the web app
 **Option A (recommended): virtual environment**
 ```bash
@@ -337,15 +339,12 @@ git lfs install
 ### 2) Clone + pull checkpoints
 ```bash
 cd ~/Downloads
-rm -rf HybridResNet50V2-RViT HybridResNet50V2-RViT-main
 git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
 cd HybridResNet50V2-RViT
-git lfs pull
 ```
 ### 3) Sanity check
 ```bash
 ls -lh Hybrid-model-with-pfdA-gsteA/best_model.pt
-head -n 1 Hybrid-model-with-pfdA-gsteA/best_model.pt
 ```
 ### 4) Run the web app (venv recommended)
 ```bash
@@ -360,66 +359,57 @@ python app.py
 ---
 ## Windows (PowerShell)
 
-## Install Git for Windows (then Git LFS, then git lfs install)
+### Prerequisites
+This repository is private. You must have an approved GitHub account with access to it before cloning.
 
-### 1) Install Git LFS (one-time)
-Install Git LFS using ONE of these:
-**Option A (Winget)**
-```powershell
+### 1) Install Python 3.11
+winget install --id Python.Python.3.11 -e
+winget upgrade --id Python.Python.3.11
+
+### 2) Install Git
+winget install --id Git.Git -e
+
+### 3) Install Git LFS
 winget install --id GitHub.GitLFS -e
-```
-**Option B (Chocolatey)**
-```powershell
-choco install git-lfs -y
-```
-Then enable it:
-```powershell
 git lfs install
-```
-### 2) Clone + pull checkpoints (DON'T use ZIP)
-```powershell
-cd $env:USERPROFILE\Downloads
-Remove-Item -Recurse -Force HybridResNet50V2-RViT, HybridResNet50V2-RViT-main -ErrorAction SilentlyContinue
+
+### 4) Check that Git and Python are available
+git --version
+git lfs version
+py -3.11 --version
+
+### 5) Create a project folder and clone the repository
+mkdir $env:USERPROFILE\ai_project
+cd $env:USERPROFILE\ai_project
 git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
 cd HybridResNet50V2-RViT
-git lfs pull
-```
-### 3) Sanity check (must NOT be tiny)
-```powershell
+
+### 6) Check that a model checkpoint exists
 dir Hybrid-model-with-pfdA-gsteA\best_model.pt
-Get-Content Hybrid-model-with-pfdA-gsteA\best_model.pt -TotalCount 1
-```
- The file size should be large (e.g., ~100MB).
- If the first line shows version https://git-lfs.github.com/spec/v1, run git lfs pull again.
-### 4) Run the web app (venv recommended)
-```powershell
+
+# If checkpoint files are missing or unexpectedly small, run:
+# git lfs pull
+
+### 7) Run the demo web app
 cd webapp
-python -m venv .venv
+py -3.11 -m venv .venv
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
+
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+
+### 8) Start the demo app
 python app.py
-```
-
-
-**If PowerShell blocks activation, run PowerShell as Administrator once and execute:**
-```powershell
-Set-ExecutionPolicy RemoteSigned
-```
 ---
-## After this (expected)
-After the steps above, the model checkpoint files should exist in each model folder, for example:
-- `Hybrid-model-with-pfdA-gsteA/best_model.pt`
-- `Hybrid-model-with-pfdB-gsteB/best_model.pt`
-- `Hybrid-model-without-pfdA-gsteA/best_model.pt`
-- `Hybrid-model-without-pfdB-gsteB/best_model.pt`
+### app.py starts the local Flask demo web application for model inference and visualisation. It does not train or test the models.
 
 ## Dependencies
 
 > Demo web app: install only `webapp/requirements.txt`
 
 >  Training / preprocessing: use the root requirements `requirements.txt` (or a separate environment)
-
 
 
 ## Then **open**:
