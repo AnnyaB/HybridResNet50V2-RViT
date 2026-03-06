@@ -5,9 +5,8 @@ __pycache__/
 *.pth
 *.ipynb_checkpoints/
 
-# Datasets (keep only metadata and split files)
-data/raw/
-data/processed/
+# Datasets
+
 data/external/
 data/interim/
 
