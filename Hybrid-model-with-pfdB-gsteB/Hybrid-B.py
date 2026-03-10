@@ -2,7 +2,7 @@
 
 # Libraries I needed
 
-import math  # I use this for ceil/sqrt when handling head dims and token-grid inference.
+import math  # I used this for ceil/sqrt when handling head dims and token-grid inference.
 import torch  # torch as the tensor and autograd engine for everything in this model.
 import torch.nn as nn  # nn.Module and layer primitives to build trainable blocks.
 import torch.nn.functional as F  # functional ops for pooling/interpolation/activations.
@@ -10,7 +10,7 @@ import torch.nn.functional as F  # functional ops for pooling/interpolation/acti
 # CNN BACKBONE: pretrained ResNet50V2 via timm
 class ResNet50V2TimmBackbone(nn.Module):
     """
-    I wrap timm’s ResNetV2 so the rest of the model always gets a consistent output:
+    wrapped timm’s ResNetV2 so the rest of the model always gets a consistent output:
       input  : (B, 3, 224, 224)
       output : (B, C, 7, 7)  for 224x224 input (final ResNet stage feature map)
     """
@@ -91,7 +91,7 @@ class PFD(nn.Module):
         return gated, mask  # returning both: gated features for learning and mask for GSTE/XAI.
 
 
-# PATCH EMBEDDING: turn an image into patch tokens (ViT-style)
+# PATCH EMBEDDING: turn an image into patch tokens (similar to vit)
 class ImagePatchEmbed(nn.Module):
     """
     converting an image into a sequence of patch embeddings.
@@ -167,7 +167,7 @@ class PositionalAndRotationEmbedding(nn.Module):
         if ht == self.base_h and wt == self.base_w:  # if grid is unchanged, I can reuse pos directly.
             pos = self.pos  # (1, base_h*base_w, D)
         else:
-            # If grid changed, I reshape pos into an image-like grid so I can interpolate smoothly.
+            # If grid changed, I reshaped pos into an image-like grid so I can interpolate smoothly.
             pos = self.pos.reshape(1, self.base_h, self.base_w, self.embed_dim)  # (1,H,W,D)
             pos = pos.permute(0, 3, 1, 2)  # (1,D,H,W) so interpolate works on spatial dims.
             pos = F.interpolate(  # resizing the positional grid to (ht, wt).
@@ -717,7 +717,7 @@ class HybridResNet50V2_RViT_Ablation(HybridResNet50V2_RViT):
     
     """
     Ablation version:
-    - I disable PFD and GSTE so the model runs without mask guidance or dynamic token shrinking.
+    - I disabled PFD and GSTE so the model runs without mask guidance or dynamic token shrinking.
     - This keeps the rest of the pipeline identical for a fair comparison. 
     MORE IS SHARED ON THE ABLATION SCRIPT
     """

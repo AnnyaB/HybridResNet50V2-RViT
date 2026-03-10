@@ -16,11 +16,11 @@ import hashlib
 import math
 
 
-# - numpy: numeric ops, image arrays, stats
-# - PIL: image I/O + EXIF orientation safety and conversions
-# - sklearn: stratified splitting
-# - pandas: tabular DataFrames and CSV output
-# - tqdm: progress bars (makes long loops visible)
+# numpy: numeric ops, image arrays, stats
+# PIL: image I/O and EXIF orientation safety and conversions
+# sklearn: stratified splitting
+# pandas: tabular DataFrames and CSV output
+# tqdm: progress bars (makes long loops visible)
 import numpy as np
 from PIL import Image, ImageOps
 from sklearn.model_selection import train_test_split
@@ -82,9 +82,9 @@ RANDOM_STATE = 42
 VAL_FRACTION_OF_TRAINING = 0.20   # 80/20 split inside Kaggle Training (Same as Krishnan et al 2024)
 
 # Dedup policy:
-# If an exact duplicate exists in BOTH Training and Testing, keep Testing copy, it's the safer choice for leakage prevention 
-# (Training is more likely to be used in data augmentation or be accidentally included in validation 
-# if Icreated a new test split from Training).
+# If an exact duplicate exists in BOTH Training and Testing, keep Testing copy, it's the safer choice for leakage prevention
+# (Training is more likely to be used in data augmentation or be accidentally included in validation
+# if creating a new test split from Training).
 PREFER_TESTING_ON_CROSS_SPLIT_DUPLICATES = True
 
 # Tight crop parameters:
@@ -231,7 +231,7 @@ def processed_filename_for(orig_path: str) -> str:
     Building a unique, deterministic filename for the processed image
     to avoid collisions (same src.name in different folders).
 
-    I use SHA1(file_bytes) and original extension.
+    I used SHA1(file_bytes) and original extension.
     """
     # Converting to Path for suffix handling
     p = Path(orig_path)
@@ -568,7 +568,7 @@ def save_raw_analysis(stats_df: pd.DataFrame):
 
 
 
-# TIGHT BRAIN CROPPING - KAGGLE-ALIGNED SPLITS - RESIZED IMAGES
+# TIGHT BRAIN CROPPING - SIMILAR TO KAGGLE SPLITS - RESIZED IMAGES
 
 
 def tight_crop_to_brain(img: Image.Image) -> Image.Image:
@@ -876,7 +876,10 @@ def main():
     print("Dataset preparation and audit completed (cropped 224x224 images only).")
 
 
-# Standard Python entry point pattern:
-# - allows importing functions without running pipeline automatically
+
+# allows importing functions without running pipeline automatically
 if __name__ == "__main__":
     main()
+    
+### THE COMMENTS CAN BE UNORGANIZED AT PLACES BECAUSE IT THE IMPLEMENTATION TOOK QUITE SOME TIME
+### SO PLEASE BARE WITH ME
