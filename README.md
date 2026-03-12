@@ -14,7 +14,7 @@
 
 
 ## Problem statement
-Brain tumour MRI classifiers can appear accurate while relying on non-tumour shortcuts (artefacts, skull boundaries, acquisition bias). This project builds hybrid CNN–Transformer models with lightweight guidance and XAI to encourage tumour-centred reasoning and interpretable outputs.
+Brain tumour MRI classifiers can appear accurate while relying on non-tumour shortcuts (artefacts, skull boundaries, acquisition bias). This project builds hybrid CNN–Transformer models with experimental guidance and XAI to encourage tumour-centred reasoning and interpretable outputs.
 
 ---
 
@@ -71,7 +71,7 @@ This repository contains a brain tumour MRI classification pipeline with:
 ```
 
 ## Proposed contributions 
-This project introduces two lightweight, inspectable guidance modules integrated into a hybrid CNN–Transformer pipeline:
+This project introduces two experimental, inspectable guidance modules integrated into a hybrid CNN–Transformer pipeline:
 
 - **PFD (Pathology-Focused Disentanglement):** a learnable soft spatial mask over the CNN’s 7×7 feature map.
 - **GSTE (Guided Semantic Token Evolution):** reuses the same mask to steer transformer tokens; Hybrid B can optionally compress tokens toward highlighted regions.
@@ -458,7 +458,6 @@ model’
 Xia, T., Chartsias, A. and Tsaftaris, S.A. (2020) ‘Pseudo-healthy synthesis with pathology disentanglement and adversarial learning’
 , Medical Image
 Analysis, 64, 101719. doi:https://doi.org/10.1016/j.media.2020.101719 (Accessed: 6 February 2026).
-
 
 
 ## Licensing and medical disclaimer
