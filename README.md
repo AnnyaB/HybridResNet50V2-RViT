@@ -414,6 +414,8 @@ python app.py
 
 http://127.0.0.1:5000
 
+## Please download the small test dataset (16 images), which was created by combining raw testing images and processed testing images from the webapp folder, for testing the demo app.
+
 ## Demo Web App Screenshot
 
 ![Demo Web App](docs/images/demo-app.png)
