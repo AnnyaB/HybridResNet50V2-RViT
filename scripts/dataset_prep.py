@@ -8,6 +8,13 @@
 # FIND MORE ABOUT USING LANCZOS RESAMPLING HERE - https://github.com/jeffboody/Lanczos
 # FOR SHA1 SEE https://docs.python.org/3/library/hashlib.html
 
+# External libraries used here are cited in Appendix A2.3:
+# NumPy (Harris et al., 2020); pandas (McKinney, 2010);
+# Pillow (Clark and contributors, n.d.); scikit-learn (Pedregosa et al., 2011);
+# tqdm (da Costa-Luis, 2019).
+
+
+
 # Libraries I needed 
 # (OS/filesystem, hashing, math utilities)
 import os

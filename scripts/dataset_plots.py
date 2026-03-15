@@ -1,6 +1,10 @@
 # THIS FILE IS FOR GENERATING THE PLOTS FROM DATASET PREPARATION (dataset_prep.py) TO DESCRIBE THE DATASET IN THE REPORT. 
 # I PLOTS I SHARED IN MY REPORT ARE GENERATED USING THIS SCRIPT.
 
+# External libraries used here are cited in Appendix A2.3:
+# NumPy (Harris et al., 2020); pandas (McKinney, 2010);
+# Matplotlib (Hunter, 2007); Pillow (Clark and contributors, n.d.).
+
 # Libraries I needed
 #  path handling
 from pathlib import Path

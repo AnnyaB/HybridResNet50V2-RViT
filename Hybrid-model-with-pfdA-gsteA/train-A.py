@@ -1,4 +1,8 @@
 # THIS IS THE TRAINING FILE FOR HYBRID A WITH PFB-GSTE VARIANT A
+# External libraries used here are cited in Appendix A2.3:
+# NumPy (Harris et al., 2020); PyTorch (Paszke et al., 2019);
+# Matplotlib (Hunter, 2007); scikit-learn (Pedregosa et al., 2011).
+
 
 # Libraries I needed
 

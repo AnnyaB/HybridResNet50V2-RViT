@@ -1,4 +1,8 @@
 # THIS IS THE FILE FOR XAI FOR THE HYBRID MODEL A WITH PFD-GSTE VARIANT A
+# External libraries used here are cited in Appendix A2.3:
+# NumPy (Harris et al., 2020); PyTorch (Paszke et al., 2019);
+# Matplotlib (Hunter, 2007); Pillow (Clark and contributors, n.d.).
+
 
 # Libraries I needed
 

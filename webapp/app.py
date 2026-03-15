@@ -3,7 +3,13 @@
 # THE XAI OVERLAYS ARE COMPUTED USING THE SCRIPTS FOR GRAD-CAM++ AND ATTENTION ROLLOUT IN MY REPO, 
 # BUT ADAPTED TO WORK SAFELY IN THIS WEB SERVER CONTEXT.
 
-# THESE ARE THE LIBARIES I USED IN THIS APP WHICH COULDN'T BE ALL DONE BY ME FROM SCRATCH 
+# External libraries used here are cited in Appendix A2.3:
+# Flask (Pallets, n.d.); NumPy (Harris et al., 2020);
+# PyTorch (Paszke et al., 2019); Matplotlib (Hunter, 2007);
+# Pillow (Clark and contributors, n.d.).
+
+
+# THESE ARE THE LIBARIES I USED IN THIS APP WHICH COULDN'T BE ALL DONE BY ME FROM SCRATCH  
 
 import os  # OS utilities (env vars, paths, etc.)
 os.environ["MPLBACKEND"] = "Agg"  # Forcing Matplotlib to use a non-GUI backend \

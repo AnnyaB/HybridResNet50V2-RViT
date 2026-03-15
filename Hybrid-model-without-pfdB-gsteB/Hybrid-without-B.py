@@ -1,4 +1,7 @@
 # THIS IS THE FILE FOR THE HYBRID MODEL WITHOUT PFD-GSTE VARIANT B (ABLATION).
+# External libraries used here are cited in Appendix A2.3:
+# PyTorch (Paszke et al., 2019); timm (Wightman, 2019).
+
 
 # Libraries I needed 
 
