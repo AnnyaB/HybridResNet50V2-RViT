@@ -503,14 +503,14 @@ class HybridResNet50V2_RViT(nn.Module):
     # - Optionally returns XAI dict with attentions, mask, and chosen GSTE side
     
     def forward(self, x, return_xai=False):
-        # =========================
+ 
         # CNN backbone
-        # =========================
+
         feat = self.cnn(x)  # (B,C,7,7)
 
-        # =========================
+      
         # PFD (optional)
-        # =========================
+    
         if self.use_pfd_gste:
             feat_path, mask_feat = self.pfd(feat)  # (B,C,7,7), (B,1,7,7)
             feat_for_cnn = feat_path
@@ -523,27 +523,27 @@ class HybridResNet50V2_RViT(nn.Module):
         self._last_cnn_feat = feat_for_cnn
         self._last_cnn_mask_img = mask_img
 
-        # =========================
+
         # CNN pooled vector (head regularisation)
-        # =========================
+      
         z_cnn = self.cnn_pool(feat_for_cnn).flatten(1)   # (B,C)
         z_cnn = self.cnn_drop(z_cnn)
         z_cnn = self.cnn_proj(z_cnn)                     # (B,fusion_dim)
         z_cnn = self.cnn_bn(z_cnn)
         z_cnn = F.relu(z_cnn, inplace=True)
 
-        # =========================
-        # GSTE: choose dynamic token grid once (batch-consistent) from mask
-        # =========================
+   
+        # GSTE: choose dynamic token grid once (batch-consistent) from mask OPTIONAL IN THIS CASE
+    
         if self.use_pfd_gste:
             alpha0 = self._mask_to_alpha_grid(mask_img, self.base_grid)  # (B,1,14,14)
             dyn_side = self._choose_dynamic_side(alpha0)                 # int in [min..14]
         else:
             dyn_side = self.base_grid
 
-        # =========================
+ 
         # RViT rotations: rotate IMAGE, patchify P=16, average embeddings
-        # =========================
+    
         token_sets = []
         for k in self.rotations:
             # rotate IMAGE (k in {0,1,2,3} for 0/90/180/270)
@@ -569,18 +569,18 @@ class HybridResNet50V2_RViT(nn.Module):
         # Average embeddings across rotations BEFORE encoder (Average integration)
         Tavg = torch.stack(token_sets, dim=0).mean(dim=0)  # (B,N,D), N = dyn_side^2 or 196
 
-        # =========================
+
         # Transformer encoder (MHSA + DWConv + MLP)
-        # =========================
+
         Tenc, attn_list = self.encoder(Tavg, return_attn=return_xai)
 
         # Token global average pooling
         z_vit = Tenc.mean(dim=1)
         z_vit = F.relu(self.vit_proj(z_vit), inplace=True)
 
-        # =========================
+
         # Fusion and classifier
-        # =========================
+   
         z = torch.cat([z_cnn, z_vit], dim=1)
         h = F.relu(self.fuse_fc(z), inplace=True)
         h = self.fuse_drop(h)
