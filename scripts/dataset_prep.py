@@ -13,8 +13,6 @@
 # Pillow (Clark and contributors, n.d.); scikit-learn (Pedregosa et al., 2011);
 # tqdm (da Costa-Luis, 2019).
 
-
-
 # Libraries I needed 
 # (OS/filesystem, hashing, math utilities)
 import os
@@ -881,7 +879,6 @@ def main():
 
     # Finished
     print("Dataset preparation and audit completed (cropped 224x224 images only).")
-
 
 
 # allows importing functions without running pipeline automatically
