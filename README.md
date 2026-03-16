@@ -1,4 +1,4 @@
-# Pathology-Attentive Hybrid CNN-Transformer for Explainable Brain Tumour MRI Classification
+# Pathology-Guided Hybrid CNN-Transformer Models for Explainable Brain Tumour MRI Classification
  
 **University of Hertfordshire — Department of Computer Science**  
 **Programme:** Modular BSc (Hons) Computer Science (Artificial Intelligence)  
