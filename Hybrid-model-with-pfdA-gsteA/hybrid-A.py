@@ -352,7 +352,7 @@ class HybridResNet50V2_RViT(nn.Module):
         vit_dropout=0.1,
         fusion_dim=256,
         fusion_dropout=0.5,
-        rotations=(0, 1, 2, 3),  # torch.rot90 k values
+        rotations=(0, 1, 2, 3),  # torch.rot90 k values for 0°, 90°, 180°, 270° rotations
         cnn_name="resnetv2_50x1_bitm",
         cnn_pretrained=True,
     ):
