@@ -360,48 +360,87 @@ python app.py
 ## Windows (PowerShell)
 
 ### Prerequisites
+
 This repository is private. You must have an approved GitHub account with access to it before cloning.
 
+---
+
 ### 1) Install Python 3.11
+
+```powershell
 winget install --id Python.Python.3.11 -e
 winget upgrade --id Python.Python.3.11
+```
+
+---
 
 ### 2) Install Git
+
+```powershell
 winget install --id Git.Git -e
+```
+
+---
 
 ### 3) Install Git LFS
+
+```powershell
 winget install --id GitHub.GitLFS -e
 git lfs install
+```
+
+---
 
 ### 4) Check that Git and Python are available
+
+```powershell
 git --version
 git lfs version
 py -3.11 --version
+```
+
+---
 
 ### 5) Create a project folder and clone the repository
+
+```powershell
 mkdir $env:USERPROFILE\ai_project
 cd $env:USERPROFILE\ai_project
 git clone https://github.com/AnnyaB/HybridResNet50V2-RViT.git
 cd HybridResNet50V2-RViT
+```
+
+---
 
 ### 6) Check that a model checkpoint exists
+
+```powershell
 dir Hybrid-model-with-pfdA-gsteA\best_model.pt
+```
 
+---
 
-### 7) Run the demo web app
+### 7) Set up the demo web app
+
+```powershell
 cd webapp
 py -3.11 -m venv .venv
-
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
-
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+---
 
 ### 8) Start the demo app
+
+```powershell
 python app.py
----
-### app.py starts the local Flask demo web application for model inference and visualisation. It does not train or test the models.
+```
+
+> **Note:** `app.py` starts the local Flask demo web application for model inference and visualisation. It does not train or test the models.
+
 
 ## Dependencies
 
@@ -414,7 +453,7 @@ python app.py
 
 http://127.0.0.1:5000
 
-## Please download the small test dataset (16 images), which was created by combining raw testing images and processed testing images from the webapp folder, for testing the demo app.
+### Download the small test dataset (16 images), which was created by combining raw testing images and processed testing images from the webapp folder, for testing the demo app.
 
 ## Demo Web App Screenshot
 
