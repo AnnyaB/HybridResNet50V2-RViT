@@ -468,37 +468,35 @@ It means a model alias name was remapped internally, but the model can still **l
 ## References 
 
 Bolya, D., Fu, C., Dai, X., Zhang, P., Feichtenhofer, C. and Hoffman, J. (2022) Token merging: Your ViT but faster. arXiv preprint.
-doi:https://doi.org/10.48550/arXiv.2210.09461 (Accessed: 6 February 2026).
+https://doi.org/10.48550/arXiv.2210.09461 
 
 He, K., Zhang, X., Ren, S. and Sun, J. (2016) ‘Identity mappings in deep residual networks’
 , European Conference on Computer Vision, pp. 630–645.
-doi:https://doi.org/10.1007/978-3-319-46493-038 (Accessed: 6 February 2026).
+https://doi.org/10.1007/978-3-319-46493-038 
 
-Hugging Face (2019) timm/resnetv2_50x1_bit.goog_in21k_ft_in1k [Pretrained model weights]. Hugging Face Model Hub. Available at: https://huggingface.co/timm/resnetv2_50x1_bit.goog_in21k_ft_in1k (Accessed: 14 February 2026).
+Hugging Face (2019) timm/resnetv2_50x1_bit.goog_in21k_ft_in1k [Pretrained model weights]. Available at: https://huggingface.co/timm/resnetv2_50x1_bit.goog_in21k_ft_in1k (Accessed: 14 February 2026).
 
-Kleinberg, J. and Tardos, E. (2006) Algorithm design. 1st edn. Boston, MA: Pearson Education / Addison-Wesley. ISBN: 0-321-29535-8 (Accessed: 6
-February 2026).
+Kleinberg, J. and Tardos, E. (2006) Algorithm design. 1st edn. Boston, MA: Pearson Education / Addison-Wesley. ISBN: 0-321-29535-8
 
 Kolesnikov, A. et al. (2020) ‘Big Transfer (BiT): General visual representation learning’
 , European Conference on Computer Vision.
-doi:https://doi.org/10.48550/arXiv.1912.11370 (Accessed: 6 February 2026).
+https://doi.org/10.48550/arXiv.1912.11370 
 
 Krishnan, P.T., Krishnadoss, P., Khandelwal, M., Gupta, D., Nihaal, A. and Kumar, T.S. (2024) ‘Enhancing brain tumor detection in MRI with a rotation
 invariant Vision Transformer’
-, Frontiers in Neuroinformatics, 18, 1414925. doi:https://doi.org/10.3389/fninf.2024.1414925 (Accessed: 6 February 2026).
+, Frontiers in Neuroinformatics, 18, 1414925. https://doi.org/10.3389/fninf.2024.1414925 
 
 Rao, Y. et al. (2021) ‘DynamicViT: Efficient vision transformers with dynamic token sparsification’
 , Advances in Neural Information Processing Systems.
-doi:https://doi.org/10.48550/arXiv.2106.02034 (Accessed: 6 February 2026).
+https://doi.org/10.48550/arXiv.2106.02034
 
 Sarada, B., Reddy, K.N., Muktisingh, R., Babu, R. and Babu, B.S.S.V.R. (2025) ‘Brain tumor classification using modified ResNet50V2 deep learning
 model’
-, International Journal of Computing and Digital Systems, 17(1), pp. 1–11. doi:https://doi.org/10.12785/ijcds/1571021750 (Accessed: 6 February
-2026).
+, International Journal of Computing and Digital Systems, 17(1), pp. 1–11. https://doi.org/10.12785/ijcds/1571021750
 
 Xia, T., Chartsias, A. and Tsaftaris, S.A. (2020) ‘Pseudo-healthy synthesis with pathology disentanglement and adversarial learning’
 , Medical Image
-Analysis, 64, 101719. doi:https://doi.org/10.1016/j.media.2020.101719 (Accessed: 6 February 2026).
+Analysis, 64, 101719. https://doi.org/10.1016/j.media.2020.101719
 
 
 ## Licensing and medical disclaimer
