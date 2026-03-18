@@ -728,3 +728,8 @@ class HybridResNet50V2_RViT_Ablation(HybridResNet50V2_RViT):
     def __init__(self, *args, **kwargs):
         kwargs["use_pfd_gste"] = False  # force ablation mode regardless of caller input.
         super().__init__(*args, **kwargs)  # build the parent with guidance disabled.
+        
+        
+
+# THE CODE ARCHITECTURE FOR HYBRID B FOLLOWS THIS STRUCTURE:
+# Input MRI -> ResNet50V2 -> PFD mask gating on CNN features -> upsampled mask -> raw image patch embedding into 196 tokens -> GSTE mask-guided reweighting and optional token shrinking -> positional/rotation embeddings -> 10-block RViT-style encoder -> mean pooling -> fusion with guided CNN summary -> classifier

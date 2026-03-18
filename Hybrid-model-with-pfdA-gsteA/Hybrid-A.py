@@ -531,3 +531,10 @@ class HybridResNet50V2_RViT(nn.Module):
         var = probs.var(dim=0, unbiased=False)  # (B,C)
 
         return mu, var
+    
+    
+    # DURING THE DESIGNING PROCESS, I INTENTIONALLY KEPT ONE TRANSFORMER PATHWAY TO BE GUIDED USING FEATURE TOKENS, 
+    # WHICH IS HYBRID A AND THE OTHER USING RAW IMAGE PATCHES, IN HYBRID B. 
+    # THIS WAS TO EXPLORE WHETHER GUIDANCE AT THE FEATURE LEVEL OR RAW IMAGE LEVEL WOULD BE MORE EFFECTIVE.
+    # THE CODE ARCHITECTURE FOR HYBRID A FOLLOWS THIS STRUCTURE: 
+    # Input MRI -> ResNet50V2 -> 7x7 CNN features -> PFD mask gating -> 49 feature tokens -> GSTE token reweighting -> positional/rotation embeddings -> 10-block RViT-style encoder -> mean pooling -> fusion with CNN summary -> classifier
