@@ -117,6 +117,15 @@ Run the commands below from the main project folder (the top-level repository fo
 
 ---
 
+### Reproduction order
+
+1. download and extract the Kaggle dataset into `data/raw/brain-tumor-mri-dataset/`
+2. run `python scripts/dataset_prep.py`
+3. run one of the training scripts for Hybrid A, Hybrid B, Ablation A, or Ablation B
+4. optionally run the corresponding XAI script
+5. optionally run the demo app from `webapp/`
+
+
 ## Dataset
 
 **Dataset used:** Masoud Nickparvar (2021), *Brain Tumor MRI Dataset*  
@@ -207,7 +216,7 @@ results/
 
 ## Architecture overview
 
-### Hybrid A (PFD-A + GSTE-A)
+### Hybrid A (PFD-A and GSTE-A)
 
 - input: RGB 224×224
 - ResNet50V2 backbone produces `feat` with shape `(B, 2048, 7, 7)`
@@ -221,7 +230,7 @@ results/
 
 ![Hybrid A architecture](docs/images/hybrid-a-architecture.png)
 
-### Hybrid B (PFD-B + GSTE-B)
+### Hybrid B (PFD-B and GSTE-B)
 
 - uses the same backbone and learned pathology mask
 - CNN descriptor is computed from **gated** features
@@ -239,7 +248,7 @@ results/
 ### Environment used
 
 - **Python:** 3.12.2
-- **Training platform:** Kaggle
+- **Training platform:** Kaggle (Tesla P100)
 - **Local development:** macOS
 - **Platform string:** `macOS-26.2-arm64-arm-64bit`
 
