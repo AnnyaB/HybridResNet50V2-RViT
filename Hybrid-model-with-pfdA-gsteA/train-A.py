@@ -1,3 +1,6 @@
+# AUTHOR: RIYA BASAK
+# 22089065
+
 # THIS IS THE TRAINING FILE FOR HYBRID A WITH PFB-GSTE VARIANT A
 # External libraries used here are cited in Appendix A2.3:
 # NumPy (Harris et al., 2020); PyTorch (Paszke et al., 2019);

@@ -1,3 +1,6 @@
+# AUTHOR: RIYA BASAK
+# 22089065
+
 # THIS IS THE FILE FOR THE HYBRID MODEL WITH PFD-GSTE VARIANT B
 # External libraries used here are cited in Appendix A2.3:
 # PyTorch (Paszke et al., 2019); timm (Wightman, 2019).
