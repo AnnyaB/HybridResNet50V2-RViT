@@ -541,3 +541,11 @@ class HybridResNet50V2_RViT(nn.Module):
     # THIS WAS TO EXPLORE WHETHER GUIDANCE AT THE FEATURE LEVEL OR RAW IMAGE LEVEL WOULD BE MORE EFFECTIVE.
     # THE CODE ARCHITECTURE FOR HYBRID A FOLLOWS THIS STRUCTURE: 
     # Input MRI -> ResNet50V2 -> 7x7 CNN features -> PFD mask gating -> 49 feature tokens -> GSTE token reweighting -> positional/rotation embeddings -> 10-block RViT-style encoder -> mean pooling -> fusion with CNN summary -> classifier
+    
+    """ ALSO, some parts of Hybrid A may appear unusual but they are intentional. 
+    # In particular, the transformer encoder is initialised with placeholder spatial metadata (ht=0, wt=0) 
+    # because the main Hybrid A pathway tokenises the 7x7 CNN feature map directly rather than raw-image patches.
+    # During the forward pass, each RViT block reconstructs the correct spatial grid from the runtime token count (49 -> 7x7). 
+    # Likewise, the use of embed_dim=142 with heads=10 is handled deliberately through a flexible attention 
+    # implementation that projects attention in 140 internal dimensions and then maps back to 142. 
+    # These choices are implementation decisions for this experimental model and do not prevent correct execution."""

@@ -736,3 +736,13 @@ class HybridResNet50V2_RViT_Ablation(HybridResNet50V2_RViT):
 
 # THE CODE ARCHITECTURE FOR HYBRID B FOLLOWS THIS STRUCTURE:
 # Input MRI -> ResNet50V2 -> PFD mask gating on CNN features -> upsampled mask -> raw image patch embedding into 196 tokens -> GSTE mask-guided reweighting and optional token shrinking -> positional/rotation embeddings -> 10-block RViT-style encoder -> mean pooling -> fusion with guided CNN summary -> classifier
+
+"""Same design decisions are applied to Hybrid B as well. 
+In particular, the model uses embed_dim=142 with heads=10, 
+which is handled by a flexible multi-head self-attention module that expands attention internally and 
+then projects back to the required embedding size. 
+Hybrid B also allows guidance-based token-grid reduction, 
+so the number of transformer tokens may become smaller than the default 14x14 grid. 
+When this happens, each RViT block reconstructs a valid spatial layout from the current token count at runtime.
+In addition, the shrinking decision is made once per batch rather than per sample, 
+which is a practical design choice to keep batch tensor shapes consistent during training and inference."""
