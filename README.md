@@ -91,19 +91,6 @@ Two guidance strengths are implemented for matched comparison:
 
 ---
 
-## Source code access
-
-This repository is currently **private** and is shared for **academic assessment and supervision**.
-
-If you are an authorised marker or reviewer and would like access:
-
-1. create a GitHub account if you do not already have one
-2. email your **GitHub username** to **rb23ack@herts.ac.uk**
-3. request access to the private repository
-4. accept the GitHub invitation and then clone the repository normally
-
----
-
 ## Reproducibility overview
 
 There are two ways to use this repository:
