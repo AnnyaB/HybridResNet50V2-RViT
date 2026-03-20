@@ -21,8 +21,8 @@ This repository contains:
 
 - **offline preprocessing** with leakage-safe SHA1 deduplication, tight-crop preprocessing, and split generation
 - **four training variants**
-  - Hybrid A (**PFD-A + GSTE-A**)
-  - Hybrid B (**PFD-B + GSTE-B**)
+  - Hybrid A (**PFD-A and GSTE-A**)
+  - Hybrid B (**PFD-B and GSTE-B**)
   - Ablation without PFD-A / GSTE-A
   - Ablation without PFD-B / GSTE-B
 - **post-hoc explainability** outputs using Grad-CAM++ and attention rollout
