@@ -6,7 +6,7 @@
 #   data/splits/tightcrop/{train,val,test}.csv
 
 # External libraries used here are cited in Appendix A2.3:
-# pandas (McKinney, 2010); Pillow (Clark and contributors, n.d.);
+# pandas (McKinney, 2010); Pillow (Clark and contributors, 2024);
 # PyTorch (Paszke et al., 2019); torchvision (PyTorch, n.d.).
 
 #

@@ -13,7 +13,7 @@
 
 # External libraries used here are cited in Appendix A2.3:
 # NumPy (Harris et al., 2020); pandas (McKinney, 2010);
-# Pillow (Clark and contributors, n.d.); scikit-learn (Pedregosa et al., 2011);
+# Pillow (Clark and contributors, 2024); scikit-learn (Pedregosa et al., 2011);
 # tqdm (da Costa-Luis, 2019).
 
 # Libraries I needed 
