@@ -1,4 +1,4 @@
-# An Experimental Approach to mitigate Shortcut Learning - Pathology-Guided Hybrid CNN-Transformer Models for Explainable Brain Tumour MRI Classification
+# An Experimental Approach to Mitigate Shortcut Learning Using Pathology-Guided Hybrid CNN-Transformer Models and Explainable AI
 
 **University of Hertfordshire — Department of Computer Science**  
 **Programme:** Modular BSc (Hons) Computer Science (Artificial Intelligence)  
