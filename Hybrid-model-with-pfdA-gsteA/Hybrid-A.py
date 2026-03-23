@@ -5,6 +5,16 @@
 # External libraries used here are cited in Appendix A2.3:
 # PyTorch (Paszke et al., 2019); timm (Wightman, 2019).
 
+# IMPORTANT **** Implementation compatibility note (embedding/head divisibility) *****
+
+"""Krishnan et al. (2024) report a 142-dimensional embedding with 10 attention heads, 
+but 142 is not exactly divisible by 10. To avoid shape errors while keeping the external configuration at 142 dimensions and 10 heads,
+this project used custom flexible attention in both hybrids. 
+In Hybrid A, head size is computed by floor division, so attention operates internally in 140 dimensions (10X14) before projection back to 142. 
+In Hybrid B, head size is computed by ceiling, so attention operates internally in 150 dimensions (10X15) before projection back to 142. 
+This means both variants keep the same reported embedding size and head count at the model interface, 
+while using slightly different internal attention-width workarounds."""
+
 
 # Libraries I needed
 
@@ -549,3 +559,4 @@ class HybridResNet50V2_RViT(nn.Module):
     # Likewise, the use of embed_dim=142 with heads=10 is handled deliberately through a flexible attention 
     # implementation that projects attention in 140 internal dimensions and then maps back to 142. 
     # These choices are implementation decisions for this experimental model and do not prevent correct execution."""
+    
