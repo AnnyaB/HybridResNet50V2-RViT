@@ -1,4 +1,4 @@
-# An Experimental Approach to Mitigate Shortcut Learning Using Pathology-Guided Hybrid CNN-Transformer Models and Explainable AI
+# An Experimental Approach to Mitigate Shortcut Learning Using Pathology-Guided Hybrid CNN-Transformer Models
 
 **University of Hertfordshire — Department of Computer Science**  
 **Programme:** Modular BSc (Hons) Computer Science (Artificial Intelligence)  
@@ -641,6 +641,13 @@ Sarada, B., Reddy, K.N., Muktisingh, R., Babu, R. and Babu, B.S.S.V.R. (2025) �
 Xia, T., Chartsias, A. and Tsaftaris, S.A. (2020) ‘Pseudo-healthy synthesis with pathology disentanglement and adversarial learning’, *Medical Image Analysis*, 64, 101719. https://doi.org/10.1016/j.media.2020.101719
 
 ---
+
+## Reusability and future extension
+
+PFD and GSTE were implemented as reusable project-developed modules, but the present Hybrid A and Hybrid B models are task-specific compositions designed for four-class brain MRI classification. 
+In future work, the same modules could be imported and reassembled for related 2D medical-imaging tasks, with appropriate changes to preprocessing, backbone choice, output classes, and training design.
+
+At present, these are reusable library like components within the project codebase rather than a separately packaged external library.
 
 ## Licensing and medical disclaimer
 
