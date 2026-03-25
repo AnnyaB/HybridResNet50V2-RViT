@@ -1,0 +1,5 @@
+Project artefact and source code are stored in a private GitHub repository for academic assessment.
+
+To request access, please email rb23ack@herts.ac.uk with your GitHub username.
+If you do not have a GitHub account, please create one first at https://github.com/login, and then send your username by email.
+After access is granted, please accept the GitHub invitation and follow the setup instructions in the repository README.

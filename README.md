@@ -4,7 +4,7 @@
 **Programme:** Modular BSc (Hons) Computer Science (Artificial Intelligence)  
 **Module:** 6COM2017 – Artificial Intelligence Project  
 
-**Project Title:** Mitigating Shortcut Learning in Brain Tumour Detection and Classification  
+**Project Title:** Mitigating Shortcut Learning in Brain Tumour MRI Classification  
 
 **Author:** Riya Basak (SRN: 22089065)  
 **Supervisor:** Dr Kheng Lee Koay  
