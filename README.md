@@ -624,9 +624,15 @@ If you see a timm warning about a deprecated model-name mapping, this is usually
 
 Bolya, D., Fu, C., Dai, X., Zhang, P., Feichtenhofer, C. and Hoffman, J. (2022) *Token merging: Your ViT but faster*. arXiv preprint. https://doi.org/10.48550/arXiv.2210.09461
 
+da Costa-Luis, C.O. (2019) tqdm: a fast, extensible progress meter for Python and CLI, Journal of Open Source Software, 4(37), 1277. https://doi.org/10.21105/joss.01277
+
+Harris, C.R., Millman, K.J., van der Walt, S.J., Gommers, R., Virtanen, P., Cournapeau, D., Wieser, E., Taylor, J., Berg, S., Smith, N.J., Kern, R., Picus, M., Hoyer, S., van Kerkwijk, M.H., Brett, M., Haldane, A., del Río, J.F., Wiebe, M., Peterson, P., Gérard-Marchant, P., Sheppard, K., Reddy, T., Weckesser, W., Abbasi, H., Gohlke, C. and Oliphant, T.E. (2020) Array programming with NumPy, Nature, 585, pp. 357-362. https://doi.org/10.1038/s41586-020-2649-2
+
 He, K., Zhang, X., Ren, S. and Sun, J. (2016) ‘Identity mappings in deep residual networks’, *European Conference on Computer Vision*, pp. 630–645. https://doi.org/10.1007/978-3-319-46493-038
 
 Hugging Face (2019) *timm/resnetv2_50x1_bit.goog_in21k_ft_in1k* [Pretrained model weights]. Available at: https://huggingface.co/timm/resnetv2_50x1_bit.goog_in21k_ft_in1k (Accessed: 14 February 2026).
+
+Hunter, J.D. (2007) Matplotlib: a 2D graphics environment, Computing in Science & Engineering, 9(3), pp. 90-95. https://doi.org/10.1109/MCSE.2007.55
 
 Kleinberg, J. and Tardos, E. (2006) *Algorithm design*. 1st edn. Boston, MA: Pearson Education / Addison-Wesley.
 
@@ -634,11 +640,22 @@ Kolesnikov, A. et al. (2020) ‘Big Transfer (BiT): General visual representatio
 
 Krishnan, P.T., Krishnadoss, P., Khandelwal, M., Gupta, D., Nihaal, A. and Kumar, T.S. (2024) ‘Enhancing brain tumor detection in MRI with a rotation invariant Vision Transformer’, *Frontiers in Neuroinformatics*, 18, 1414925. https://doi.org/10.3389/fninf.2024.1414925
 
+McKinney, W. (2010) Data structures for statistical computing in Python, in van der Walt, S. and Millman, J. (eds.) Proceedings of the 9th Python in Science Conference, pp. 56-61. https://doi.org/10.25080/Majora-92bf1922-00a
+
+Pallets (2024) Flask documentation. Available at: https://flask.palletsprojects.com/
+(Accessed: 12 February 2026). 
+
+Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., Killeen, T., Lin, Z., Gimelshein, N., Antiga, L., Desmaison, A., Köpf, A., Yang, E., DeVito, Z., Raison, M., Tejani, A., Chilamkurthy, S., Steiner, B., Fang, L., Bai, J. and Chintala, S. (2019) PyTorch: an imperative style, high-performance deep learning library, in Wallach, H., Larochelle, H., Beygelzimer, A., d’Alché-Buc, F., Fox, E. and Garnett, R. (eds.) Advances in Neural Information Processing Systems, 32, pp. 8024-8035. https://doi.org/10.48550/arXiv.1912.01703
+
+PyTorch (2024) torchvision documentation. Available at: https://docs.pytorch.org/vision/main/index.html
+ (Accessed: 22 October 2025).
+
 Rao, Y. et al. (2021) ‘DynamicViT: Efficient vision transformers with dynamic token sparsification’, *Advances in Neural Information Processing Systems*. https://doi.org/10.48550/arXiv.2106.02034
 
 Sarada, B., Reddy, K.N., Muktisingh, R., Babu, R. and Babu, B.S.S.V.R. (2025) ‘Brain tumor classification using modified ResNet50V2 deep learning model’, *International Journal of Computing and Digital Systems*, 17(1), pp. 1–11. https://doi.org/10.12785/ijcds/1571021750
 
 Xia, T., Chartsias, A. and Tsaftaris, S.A. (2020) ‘Pseudo-healthy synthesis with pathology disentanglement and adversarial learning’, *Medical Image Analysis*, 64, 101719. https://doi.org/10.1016/j.media.2020.101719
+
 
 ---
 
