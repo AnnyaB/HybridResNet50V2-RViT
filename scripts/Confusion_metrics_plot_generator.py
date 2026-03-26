@@ -2,7 +2,7 @@
 # 22089065
 
 # This is an example script to generate and save a confusion matrix plot
-# similar to the one presented in the paper.
+# similar to the one presented in the paper. THIS CAN BE USED TO GENERATE ANY CONFUSION MATRIX PLOT, NOT JUST THE ONE IN THE PAPER.
 # I used this to recreate the confusion matrices generated frm the training runs since those generated were low resolution and
 # were barely readable. 
 
