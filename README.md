@@ -9,8 +9,6 @@
 **Author:** Riya Basak (SRN: 22089065)  
 **Supervisor:** Dr Kheng Lee Koay  
 
-**THIS IS AN ONGOING PROJECT; THE FYP REPORT IS NOT YET COMPLETE.**
-
 ---
 
 ## Problem statement
