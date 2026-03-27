@@ -560,4 +560,6 @@ class HybridResNet50V2_RViT(nn.Module):
     # Likewise, the use of embed_dim=142 with heads=10 is handled deliberately through a flexible attention 
     # implementation that projects attention in 140 internal dimensions and then maps back to 142. 
     # These choices are implementation decisions for this experimental model and do not prevent correct execution."""
-    
+
+## In future work, the Variant A and Variant B PFD-GSTE modules can be utilised as reusable library components to support 
+# additional classification tasks for disease detection in domains such as the lung and retina.
