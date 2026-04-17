@@ -438,14 +438,13 @@ def run_inference_with_xai(loaded, pil_img):
     x, img_rgb = preprocess_image(pil_img, loaded["mean"], loaded["std"], img_size)  # Preprocess to tensor and RGB
     x = x.to(device)  # Moving input batch to correct device
 
-    with torch.no_grad():  # Disabling gradient tracking for the main probability forward pass
-        out = model(x)  # Running model forward
-        logits = out[0] if isinstance(out, (tuple, list)) else out  # Extracting logits if model returns tuple/list
-        probs_t = torch.softmax(logits, dim=1).squeeze(0)  # Converting logits -> probabilities, drop batch dim
-        probs = probs_t.detach().cpu().numpy()  # Moving to CPU and converting to NumPy array for easier handling
+    with torch.no_grad():  # MC dropout inference: getting mean probs and predictive variance across multiple stochastic forward passes
+        mu, var = model.mc_dropout_predict(x, mc_samples=20)  # mean probs and predictive variance
+        probs_t = mu.squeeze(0)  # shape: (4,)
+        probs = probs_t.detach().cpu().numpy()
 
-    pred_idx = int(np.argmax(probs))  # Index of the highest-probability class
-    conf = float(probs[pred_idx])  # Confidence = max probability
+    pred_idx = int(np.argmax(probs))
+    conf = float(probs[pred_idx])
 
     if "notumor" in class_names:  # If notumor exists, compute tumor probability as sum of other classes
         notumor_idx = class_names.index("notumor")  # Finding the notumor class index
