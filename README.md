@@ -618,11 +618,23 @@ If you see a timm warning about a deprecated model-name mapping, this is usually
 
 ---
 
+## SAMPLE OOD DATASET
+
+ For the out-of-distribution ***(OOD)*** demo, a small external sample was taken from Fernando Feltrin’s Brain Tumor MRI Images 44 Classes Kaggle dataset. The dataset is described as a collection of T1, contrast-enhanced T1, and T2 brain MRI images grouped by tumour type, and the class list includes meningioma together with many other specific tumour categories.
+
+Only five randomly selected T1ce meningioma images were used for the demo. This was done because meningioma is explicitly provided as a named class, whereas the project’s other four-class categories do not map cleanly to this dataset: pituitary and no tumour are not listed as classes on the dataset page, and glioma is not presented as one single class but is split across multiple more specific tumour labels. 
+
+
+Therefore, this dataset was used only for a small qualitative OOD demonstration, not for formal benchmark evaluation.
+
 ## References
 
 Bolya, D., Fu, C., Dai, X., Zhang, P., Feichtenhofer, C. and Hoffman, J. (2022) *Token merging: Your ViT but faster*. arXiv preprint. https://doi.org/10.48550/arXiv.2210.09461
 
 da Costa-Luis, C.O. (2019) tqdm: a fast, extensible progress meter for Python and CLI, Journal of Open Source Software, 4(37), 1277. https://doi.org/10.21105/joss.01277
+
+Feltrin, F. (2023) Brain Tumor MRI Images 44 Classes [dataset]. Kaggle. Available at: https://www.kaggle.com/datasets/fernando2rad/brain-tumor-mri-images-44c 
+(Accessed: 15 April 2026).
 
 Harris, C.R., Millman, K.J., van der Walt, S.J., Gommers, R., Virtanen, P., Cournapeau, D., Wieser, E., Taylor, J., Berg, S., Smith, N.J., Kern, R., Picus, M., Hoyer, S., van Kerkwijk, M.H., Brett, M., Haldane, A., del Río, J.F., Wiebe, M., Peterson, P., Gérard-Marchant, P., Sheppard, K., Reddy, T., Weckesser, W., Abbasi, H., Gohlke, C. and Oliphant, T.E. (2020) Array programming with NumPy, Nature, 585, pp. 357-362. https://doi.org/10.1038/s41586-020-2649-2
 
