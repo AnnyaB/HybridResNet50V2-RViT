@@ -7,7 +7,7 @@
 **Project Title:** Mitigating Shortcut Learning in Brain Tumour MRI Classification  
 
 **Author:** Riya Basak (SRN: 22089065)  
-**Supervisor:** Dr Kheng Lee Koay  
+**Supervised by:** Dr Kheng Lee Koay  
 
 ---
 
