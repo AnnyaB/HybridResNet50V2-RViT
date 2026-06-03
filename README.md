@@ -25,7 +25,7 @@ This repository contains:
   - Ablation without PFD-B / GSTE-B
 - **post-hoc explainability** outputs using Grad-CAM++ and attention rollout
 - a **local Flask demo web app** for qualitative inspection on a single uploaded image
-
+ - a reusable **PFD-GSTE guidance library** in `pfd_gste/` for importing the guidance modules into other CNN, Transformer, or hybrid medical image classifiers
 ---
 
 ## Repository structure
@@ -50,6 +50,9 @@ This repository contains:
 │       ├── hybrid-a-architecture.png
 │       ├── hybrid-b-architecture.png
 │       └── demo-app.png
+├── pfd_gste/                               # reusable PFD-GSTE guidance modules
+│   ├── __init__.py                         # public package interface
+│   └── guidance.py                         # PFD, GSTE-A, GSTE-B, patch guidance, and MC-dropout helpers
 ├── results/                               # preprocessing audit outputs, CSV summaries, plots, and evaluation outputs
 ├── Misclassified-results/                 # saved misclassification examples and related analysis outputs
 ├── scripts/
@@ -687,12 +690,166 @@ Xia, T., Chartsias, A. and Tsaftaris, S.A. (2020) ‘Pseudo-healthy synthesis wi
 
 ---
 
-## Reusability and future extension
+## Reusable PFD-GSTE guidance library
 
-PFD and GSTE were implemented as reusable project-developed modules, but the present Hybrid A and Hybrid B models are task-specific compositions designed for four-class brain MRI classification. 
-In future work, the same modules could be imported and reassembled for related 2D medical-imaging tasks, with appropriate changes to preprocessing, backbone choice, output classes, and training design.
+The folder `pfd_gste/` contains reusable PyTorch modules for pathology-focused feature gating and guided token reweighting. These modules are not tied to the original ResNet50V2-RViT model. They can be imported into other CNN, Transformer, or hybrid classifiers for related medical image classification tasks, such as brain, breast, lung, retinal, or other tumour-classification problems.
 
-At present, these are reusable library like components within the project codebase rather than a separately packaged external library.
+* `PFDGSTEVariantA`: feature-token guidance for models where transformer tokens are produced from CNN feature maps.
+* `PFDGSTEVariantB`: patch-token guidance for models where raw-image patch tokens are guided by a CNN-derived pathology mask.
+* `PathologyFocusedGate`: standalone soft spatial feature gating.
+* `mc_dropout_predict`: helper for MC-dropout uncertainty estimation.
+
+### Import
+
+```python
+from pfd_gste import PFDGSTEVariantA, PFDGSTEVariantB
+```
+
+### Minimal Variant A example
+
+Use Variant A when a CNN backbone returns a spatial feature map and the transformer operates on feature tokens.
+
+```python
+import torch.nn as nn
+
+from pfd_gste import PFDGSTEVariantA
+
+
+class GuidedFeatureClassifier(nn.Module):
+    def __init__(self, backbone, feature_channels, num_classes, embed_dim=128):
+        super().__init__()
+
+        self.backbone = backbone
+        self.guidance = PFDGSTEVariantA(feature_channels, embed_dim)
+
+        layer = nn.TransformerEncoderLayer(
+            d_model=embed_dim,
+            nhead=8,
+            dim_feedforward=embed_dim * 4,
+            batch_first=True,
+        )
+
+        self.encoder = nn.TransformerEncoder(layer, num_layers=4)
+        self.classifier = nn.Linear(embed_dim, num_classes)
+
+    def forward(self, images):
+        features = self.backbone(images)
+        tokens, mask, alpha = self.guidance(features)
+
+        tokens = self.encoder(tokens)
+        logits = self.classifier(tokens.mean(dim=1))
+
+        return logits
+```
+
+### Minimal Variant B example
+
+Use Variant B when PFD should guide the CNN feature pathway and GSTE should guide raw-image patch tokens.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from pfd_gste import PFDGSTEVariantB
+
+
+class GuidedPatchClassifier(nn.Module):
+    def __init__(self, backbone, feature_channels, num_classes, embed_dim=128):
+        super().__init__()
+
+        self.backbone = backbone
+        self.guidance = PFDGSTEVariantB(
+            in_channels=feature_channels,
+            embed_dim=embed_dim,
+            patch_size=16,
+            min_side=7,
+            max_shrink=0.50,
+        )
+
+        self.feature_pool = nn.AdaptiveAvgPool2d(1)
+        self.feature_proj = nn.Linear(feature_channels, embed_dim)
+
+        layer = nn.TransformerEncoderLayer(
+            d_model=embed_dim,
+            nhead=8,
+            dim_feedforward=embed_dim * 4,
+            batch_first=True,
+        )
+
+        self.encoder = nn.TransformerEncoder(layer, num_layers=4)
+        self.classifier = nn.Linear(embed_dim * 2, num_classes)
+
+    def forward(self, images):
+        features = self.backbone(images)
+
+        gated_features, tokens, mask, alpha, token_hw = self.guidance(
+            images,
+            features,
+            shrink=True,
+        )
+
+        cnn_vec = self.feature_pool(gated_features).flatten(1)
+        cnn_vec = F.relu(self.feature_proj(cnn_vec), inplace=True)
+
+        tokens = self.encoder(tokens)
+        token_vec = tokens.mean(dim=1)
+
+        logits = self.classifier(torch.cat([cnn_vec, token_vec], dim=1))
+
+        return logits
+```
+
+### Minimal training step
+
+The modules can be trained normally as part of a PyTorch model.
+
+```python
+import torch
+import torch.nn as nn
+
+
+def train_one_epoch(model, loader, optimiser, device):
+    model.train()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
+
+    total_loss = 0.0
+    total_correct = 0
+    total_count = 0
+
+    for images, labels in loader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        optimiser.zero_grad(set_to_none=True)
+
+        logits = model(images)
+        loss = criterion(logits, labels)
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimiser.step()
+
+        total_loss += loss.item() * images.size(0)
+        total_correct += (logits.argmax(dim=1) == labels).sum().item()
+        total_count += images.size(0)
+
+    return total_loss / total_count, total_correct / total_count
+```
+
+### Import check
+
+From the repository root:
+
+```bash
+python - <<'PY'
+from pfd_gste import PFDGSTEVariantA, PFDGSTEVariantB
+print("PFD-GSTE library imports correctly.")
+PY
+```
+
+The library is included as a local project package. It can be *reused* inside this repository without separate installation, as long as scripts are run from the repository root or the repository root is on `PYTHONPATH`.
+
 
 ## Licensing and medical disclaimer
 
