@@ -31,46 +31,64 @@ This repository contains:
 ## Repository structure
 
 ```text
+
 .
 ├── README.md
 ├── requirements.txt
+├── .gitattributes                         # Git LFS tracking rules for model checkpoints
+├── .gitignore                             # ignored files and folders
+├── Dissertation_report.pdf                # final dissertation / FYP report
+├── Research_Note.pdf                      # research note
+├── additional.txt                         # additional submitted project text
 ├── data/
-│   ├── raw/brain-tumor-mri-dataset/         # downloaded Kaggle dataset
-│   ├── processed/tightcrop/                 # generated 224×224 tight-cropped images
-│   └── splits/tightcrop/                    # generated train.csv / val.csv / test.csv
+│   ├── raw/brain-tumor-mri-dataset/       # downloaded Kaggle dataset
+│   ├── processed/tightcrop/               # generated 224x224 tight-cropped images
+│   └── splits/tightcrop/                  # generated train.csv / val.csv / test.csv
 ├── docs/
-│   ├── dataset_prep.md                      # preprocessing notes
+│   ├── dataset_prep.md                    # preprocessing notes
 │   └── images/
 │       ├── hybrid-a-architecture.png
 │       ├── hybrid-b-architecture.png
 │       └── demo-app.png
-├── results/                                 # preprocessing audit outputs + CSV summaries + plots
+├── results/                               # preprocessing audit outputs, CSV summaries, plots, and evaluation outputs
+├── Misclassified-results/                 # saved misclassification examples and related analysis outputs
 ├── scripts/
-│   ├── data.py                              # BrainMRICSV + build_transforms
-│   ├── dataset_prep.py                      # offline preprocessing + leakage-safe dedup + split generation
-│   ├── dataset_plots.py                     # dataset plots used by preprocessing
-│   └── Confusion_metrics_plot_generator.py  # helper plotting utilities
+│   ├── data.py                            # BrainMRICSV and build_transforms
+│   ├── dataset_prep.py                    # offline preprocessing, leakage-safe deduplication, and split generation
+│   ├── dataset_plots.py                   # dataset plots used by preprocessing
+│   └── Confusion_metrics_plot_generator.py # helper plotting utilities
 ├── Hybrid-model-with-pfdA-gsteA/
-│   ├── models/hybrid_model.py
+│   ├── models/
+│   │   └── hybrid_model.py
 │   ├── train-A.py
-│   └── Xai-A.py
+│   ├── Xai-A.py
+│   └── best_model.pt                      # trained checkpoint stored through Git LFS, if pulled correctly
 ├── Hybrid-model-with-pfdB-gsteB/
-│   ├── models/hybrid_model.py
+│   ├── models/
+│   │   └── hybrid_model.py
 │   ├── train-B.py
-│   └── Xai-B.py
+│   ├── Xai-B.py
+│   └── best_model.pt                      # trained checkpoint stored through Git LFS, if pulled correctly
 ├── Hybrid-model-without-pfdA-gsteA/
-│   ├── models/hybrid_model.py
+│   ├── models/
+│   │   └── hybrid_model.py
 │   ├── train-without-A.py
-│   └── Xai-without-A.py
+│   ├── Xai-without-A.py
+│   └── best_model.pt                      # trained checkpoint stored through Git LFS, if pulled correctly
 ├── Hybrid-model-without-pfdB-gsteB/
-│   ├── models/hybrid_model.py
+│   ├── models/
+│   │   └── hybrid_model.py
 │   ├── train-without-B.py
-│   └── Xai-without-B.py
+│   ├── Xai-without-B.py
+│   └── best_model.pt                      # trained checkpoint stored through Git LFS, if pulled correctly
 └── webapp/
-    ├── app.py
-    ├── models_registry.json
-    ├── requirements.txt
-    └── templates/index.html
+    ├── app.py                             # local Flask demo app
+    ├── models_registry.json               # checkpoint/model registry used by the demo
+    ├── requirements.txt                   # separate dependencies for the web app
+    └── templates/
+        └── index.html                     # demo web interface
+
+
 ```
 
 ---
