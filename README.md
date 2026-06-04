@@ -870,9 +870,6 @@ Basak, R. (2026) *Mitigating Shortcut Learning in Brain Tumour MRI Classificatio
 
 This software is for research and educational use only. It is **not** a certified medical device and must not be used for clinical diagnosis, patient management, or treatment decisions. Any outputs produced by this code are experimental and *may be* incorrect.
 
-### Contact
+## Contact and contributions
 
-For access requests or repository questions, contact:
-
-- **rb23ack@herts.ac.uk**
-- **riyabasak639@gmail.com**
+For questions, reproducibility issues, or suggested improvements, please open a GitHub issue.
