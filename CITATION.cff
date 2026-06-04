@@ -1,0 +1,35 @@
+
+cff-version: 1.2.0
+message: "If you use this repository, code, trained models, or PFD-GSTE guidance modules, please cite this work."
+title: "Mitigating Shortcut Learning in Brain Tumour MRI Classification"
+type: software
+authors:
+  - family-names: "Basak"
+    given-names: "Riya"
+    affiliation: "University of Hertfordshire"
+repository-code: "https://github.com/AnnyaB/HybridResNet50V2-RViT"
+url: "https://github.com/AnnyaB/HybridResNet50V2-RViT"
+date-released: "2026-03-26"
+license: "MIT"
+abstract: "This repository implements pathology-guided hybrid CNN-Transformer models for four-class brain tumour MRI classification, including PFD-GSTE guidance modules, matched ablations, leakage-aware preprocessing, explainability, uncertainty analysis, and a local demo interface."
+keywords:
+  - brain tumour MRI classification
+  - shortcut learning
+  - explainable artificial intelligence
+  - convolutional neural networks
+  - vision transformers
+  - medical image classification
+  - PFD-GSTE
+preferred-citation:
+  type: thesis
+  title: "Mitigating Shortcut Learning in Brain Tumour MRI Classification"
+  authors:
+    - family-names: "Basak"
+      given-names: "Riya"
+      affiliation: "University of Hertfordshire"
+  institution:
+    name: "University of Hertfordshire"
+  year: 2026
+  date-released: "2026-03-26"
+  url: "https://github.com/AnnyaB/HybridResNet50V2-RViT"
+

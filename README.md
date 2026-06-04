@@ -851,15 +851,21 @@ PY
 The library is included as a local project package. It can be *reused* inside this repository without separate installation, as long as scripts are run from the repository root or the repository root is on `PYTHONPATH`.
 
 
-## Licensing and medical disclaimer
+## License and citation
 
-### Private academic license (All Rights Reserved)
+### License
 
-This repository is provided under a **Private Academic / All Rights Reserved** arrangement for **assessment and supervision only**. Access is granted only to approved viewers. No part of this repository may be redistributed, copied, or used outside the scope of academic evaluation without explicit permission from the owner. Do **not** make unauthorised changes to the repository.
+This project is released under the MIT License. This means the code may be used, copied, modified, merged, published, distributed, sublicensed, and reused in future research or software projects, provided that the original copyright notice and MIT License text are included.
+
+### Citation
+
+If this repository, code, trained models, or PFD-GSTE guidance modules are useful in your work, please cite:
+
+Basak, R. (2026) *Mitigating Shortcut Learning in Brain Tumour MRI Classification*. BSc Artificial Intelligence Project, University of Hertfordshire. Available at: https://github.com/AnnyaB/HybridResNet50V2-RViT
 
 ### Medical disclaimer
 
-This software is for **research and educational use only**. It is **not** a certified medical device and must **not** be used for clinical diagnosis, patient management, or treatment decisions. Any outputs produced by this code are experimental and may be incorrect.
+This software is for research and educational use only. It is **not** a certified medical device and must not be used for clinical diagnosis, patient management, or treatment decisions. Any outputs produced by this code are experimental and *may be* incorrect.
 
 ### Contact
 
