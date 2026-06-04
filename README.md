@@ -6,7 +6,7 @@
 
 **Project Title:** Mitigating Shortcut Learning in Brain Tumour MRI Classification  
 
-**Author:** Riya Basak, **Supervised by:** Dr Kheng Lee Koay  
+**Author:** Riya Basak; **Supervised by:** Dr Kheng Lee Koay  
 
 ---
 
