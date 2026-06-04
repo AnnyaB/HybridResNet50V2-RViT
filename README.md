@@ -37,7 +37,10 @@ This repository contains:
 ├── requirements.txt
 ├── .gitattributes                         # Git LFS tracking rules for model checkpoints
 ├── .gitignore                             # ignored files and folders
+├── CITATION.cff                           # machine-readable citation metadata
+├── CITATION.bib                           # BibTeX citation                           
 ├── Dissertation_report.pdf                # final dissertation / FYP report
+├── LICENSE                  
 ├── Research_Note.pdf                      # research note
 ├── additional.txt                         # additional submitted project text
 ├── data/
