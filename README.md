@@ -39,7 +39,6 @@ This repository contains:
 ├── CITATION.bib                           # BibTeX citation 
 ├── CITATION.cff                           # machine-readable citation metadata
 ├── CODE_OF_CONDUCT.md                     # contributor and responsible-use guidelines                        
-├── Dissertation_report.pdf                # final dissertation / FYP report
 ├── LICENSE                  
 ├── Research_Note.pdf                      # research note
 ├── additional.txt                         # additional submitted project text
