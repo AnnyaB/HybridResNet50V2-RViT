@@ -8,6 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12.2-blue.svg)
+[![PyPI version](https://img.shields.io/pypi/v/pfd-gste.svg)](https://pypi.org/project/pfd-gste/)
 ![PyTorch](https://img.shields.io/badge/PyTorch-Research%20Code-ee4c2c.svg)
 ![Medical AI](https://img.shields.io/badge/Medical%20AI-Brain%20MRI-1f6feb.svg)
 ![Explainable AI](https://img.shields.io/badge/XAI-Grad--CAM%2B%2B%20%7C%20Attention%20Rollout-6f42c1.svg)
@@ -933,7 +934,19 @@ print("PFD-GSTE library imports correctly.")
 PY
 ```
 
-The library is included as a local project package. It can be *reused* inside this repository without separate installation, as long as scripts are run from the repository root or the repository root is on `PYTHONPATH`.
+---
+
+### Install from PyPI
+
+The reusable guidance components are available as the [`pfd-gste`](https://pypi.org/project/pfd-gste/) Python package for Python 3.12:
+
+```bash
+pip install pfd-gste
+```
+
+The PyPI package contains only the reusable PFD-GSTE guidance modules. It does not include the dataset, trained checkpoints, complete classifiers, experimental results, or Flask application.
+
+The modules can also be imported locally from a cloned copy of this repository when commands are run from the repository root or when the repository root is included in `PYTHONPATH`.
 
 ---
 
