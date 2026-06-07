@@ -21,3 +21,10 @@ data/interim/
 .DS_Store
 **/.DS_Store
 webapp/.venv/
+
+# Local package-development environment
+.venv-package/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
