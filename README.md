@@ -19,7 +19,7 @@ BSc Artificial Intelligence Project, 6COM2017
 
 Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
 
-[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Citation](#license-and-citation)
+[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Library](#reusable-pfd-gste-guidance-library) • [Citation](#license-and-citation)
 
 </div>
 
