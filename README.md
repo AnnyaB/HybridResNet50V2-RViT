@@ -9,6 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12.2-blue.svg)
 [![PyPI version](https://img.shields.io/pypi/v/pfd-gste.svg)](https://pypi.org/project/pfd-gste/)
+[![Package tests](https://github.com/AnnyaB/HybridResNet50V2-RViT/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/AnnyaB/HybridResNet50V2-RViT/actions/workflows/tests.yml)
 ![PyTorch](https://img.shields.io/badge/PyTorch-Research%20Code-ee4c2c.svg)
 ![Medical AI](https://img.shields.io/badge/Medical%20AI-Brain%20MRI-1f6feb.svg)
 ![Explainable AI](https://img.shields.io/badge/XAI-Grad--CAM%2B%2B%20%7C%20Attention%20Rollout-6f42c1.svg)
