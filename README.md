@@ -195,8 +195,6 @@ In this project’s curation notes, SARTAJ glioma-class issues were handled by u
 
 ### Dataset Setup for Reproduction
 
-The raw dataset is **not redistributed** in this repository.
-
 To reproduce the work from scratch:
 
 1. Download the Kaggle dataset.
