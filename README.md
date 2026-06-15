@@ -20,7 +20,7 @@ BSc Artificial Intelligence Project, 6COM2017
 
 Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
 
-[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Library](#reusable-pfd-gste-guidance-library) • [Citation](#license-and-citation)
+[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Library](#reusable-pfd-gste-guidance-library) • [Citation](#license-and-citation) • [Live](#Live Demo)
 
 </div>
 
@@ -1002,6 +1002,25 @@ If this repository, code, trained models, or PFD-GSTE guidance modules are usefu
 ```text
 Basak, R. (2026) Mitigating Shortcut Learning in Brain Tumour MRI Classification. BSc Artificial Intelligence Project, University of Hertfordshire. Available at: https://github.com/AnnyaB/HybridResNet50V2-RViT
 ```
+
+---
+## Live Demo
+
+A public Hugging Face Space is available for browser-based testing of the deployed research demo:
+
+**Live app:** https://huggingface.co/spaces/AnnyaaB/brain-tumour-pfd-gste-demo
+
+The deployed app can be opened from a phone, tablet, laptop, or desktop browser. You do not need to clone this GitHub repository or install Python locally to try the interface.
+
+Current deployed version:
+
+* runs as a Dockerised Flask application on Hugging Face Spaces;
+* loads the four trained PyTorch model variants;
+* accepts a single uploaded MRI image;
+* returns model predictions, confidence values, tumour probability, and probability plots;
+* uses fast CPU inference for public deployment.
+
+For responsiveness on free Hugging Face CPU hardware, Grad-CAM++, attention rollout, and MC-dropout uncertainty are disabled in the public deployed build. The local repository version retains the fuller qualitative XAI workflow for inspection.
 
 ---
 
