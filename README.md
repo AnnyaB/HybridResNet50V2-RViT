@@ -1021,11 +1021,9 @@ Current deployed version:
 * runs the project’s qualitative XAI workflow, including Grad-CAM++ and attention-rollout overlays where the corresponding model exposes the required activations and attention information;
 * uses the same model-specific XAI helper files as the local demo workflow: `Xai-A.py`, `Xai-B.py`, `Xai-without-A.py`, and `Xai-without-B.py`.
 
-The public Hugging Face Space is intended as a convenient browser-based research demo. Because it runs in a different Docker/Linux/CPU environment from the original local development machine, and because MC-dropout and gradient-based XAI can be sensitive to package versions, hardware kernels, and stochastic forward passes, the deployed output may not be pixel-identical to the local-machine output.
+The public Hugging Face Space is intended as a convenient browser-based research demo. Because it runs in a different Docker/Linux/CPU environment from the original local development machine, and because MC-dropout and gradient-based XAI can be sensitive to package versions, hardware kernels, and stochastic forward passes, the deployed output *may not* be pixel-identical to the local-machine output.
 
-For the most controlled check of the original research workflow, you should clone the repository, pull the Git LFS checkpoints, install the documented dependencies, and run the local Flask app or the model-specific XAI scripts on your own machine. The local workflow should be treated as the reference path for full reproducibility inspection.
-
-**Reproducibility note:** The live Space demonstrates deployment and public usability. It should not be treated as a strict replacement for the local reproducibility workflow. For exact inspection of Grad-CAM++, attention rollout, MC-dropout behaviour, and model-specific XAI outputs, run the repository locally with the documented environment and checkpoints.
+For the most *controlled* check of the original research workflow, you should clone the repository, pull the Git LFS checkpoints, install the documented dependencies, and run the local Flask app or the model-specific XAI scripts on your own machine. The local workflow should be treated as the reference path for full reproducibility inspection.
 
 ---
 
