@@ -22,6 +22,8 @@ Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
 
 <p align="center">
 
+  <a href="#medical-disclaimer">Disclaimer</a>
+
   <a href="#overview">Overview</a> 
 
   <a href="#proposed-contributions">Contributions</a> 
@@ -43,8 +45,6 @@ Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
   <a href="#reusable-pfd-gste-guidance-library">Library</a>
 
   <a href="#license-and-citation">Citation</a>
-
-  <a href="#medical-disclaimer">Disclaimer</a>
 
 </p>
 
