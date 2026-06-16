@@ -20,8 +20,7 @@ BSc Artificial Intelligence Project, 6COM2017
 
 Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
 
-[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Library](#reusable-pfd-gste-guidance-library) • [Citation](#license-and-citation) • [Live](#live-demo)
-
+[Overview](#overview) • [Contributions](#proposed-contributions) • [Reproducibility](#reproducibility-overview) • [Dataset](#dataset) • [Training](#training-protocol) • [Results](#results) • [Demo](#run-the-demo-web-app) • [Library](#reusable-pfd-gste-guidance-library) • [Citation](#license-and-citation) • [Live](#live-demo) • [Checkpoints](#hugging-face-model-checkpoints)
 </div>
 
 ---
@@ -1024,6 +1023,31 @@ Current deployed version:
 The public Hugging Face Space is intended as a convenient browser-based research demo. Because it runs in a different Docker/Linux/CPU environment from the original local development machine, and because MC-dropout and gradient-based XAI can be sensitive to package versions, hardware kernels, and stochastic forward passes, the deployed output *may not* be pixel-identical to the local-machine output.
 
 For the most *controlled* check of the original research workflow, you should clone the repository, pull the Git LFS checkpoints, install the documented dependencies, and run the local Flask app or the model-specific XAI scripts on your own machine. The local workflow should be treated as the reference path for full reproducibility inspection.
+
+---
+
+## Hugging Face Model Checkpoints
+
+The trained checkpoints are also released as separate Hugging Face model repositories:
+
+| Variant                         | Hugging Face model repository                                   |
+| ------------------------------- | --------------------------------------------------------------- |
+| Hybrid A — PFD-A + GSTE-A       | https://huggingface.co/AnnyaaB/brain-tumour-pfd-gste-hybrid-a   |
+| Hybrid B — PFD-B + GSTE-B       | https://huggingface.co/AnnyaaB/brain-tumour-pfd-gste-hybrid-b   |
+| Ablation Without PFD-A / GSTE-A | https://huggingface.co/AnnyaaB/brain-tumour-pfd-gste-ablation-a |
+| Ablation Without PFD-B / GSTE-B | https://huggingface.co/AnnyaaB/brain-tumour-pfd-gste-ablation-b |
+
+Each model repository contains the trained checkpoint, architecture source, model-specific XAI helper, loading wrapper, PFD-GSTE support modules, configuration metadata, checksum file, and model card.
+
+The checkpoint metadata was verified against the saved class order:
+
+```text
+glioma → meningioma → pituitary → notumor
+```
+
+The Hugging Face model repositories **do not** redistribute the benchmark dataset. You should follow the dataset setup and preprocessing instructions in this GitHub repository to reproduce the benchmark workflow.
+
+These model releases are provided for research reproducibility, educational inspection, and comparison with the guided and ablation variants. They are *not* certified medical devices and *must not* be used for clinical diagnosis, patient management, or treatment decisions.
 
 ---
 
