@@ -56,7 +56,7 @@ Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
 
 Brain tumour MRI classifiers can appear accurate while relying on non-tumour shortcuts such as artefacts, skull boundaries, or acquisition bias.
 
-This project develops hybrid CNN–Transformer models with experimental guidance modules and explainability tools to encourage tumour-centred reasoning and more interpretable outputs.
+This project develops hybrid CNN–Transformer models with proposed experimental guidance modules to encourage tumour-centred reasoning without segmentation masks.
 
 The repository contains:
 
