@@ -18,7 +18,7 @@
 University of Hertfordshire — Department of Computer Science
 BSc Artificial Intelligence Project, 6COM2017
 
-Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**
+Author: **Riya Basak**; Supervised by: **Dr Kheng Lee Koay**; Second Supervisor(Second Marker): **Dr Khashayar Ghamati Ghamsari** 
 
 <p align="center">
 
